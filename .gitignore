@@ -1,0 +1,16 @@
+# Push only program/ folder
+/*
+!program/
+!.gitignore
+
+# Inside program - ignore env files and generated stuff
+program/backend/venv/
+program/backend/.env
+program/backend/__pycache__/
+program/backend/app/__pycache__/
+program/admin/node_modules/
+program/admin/.env.local
+program/admin/.next/
+program/mobile/.dart_tool/
+program/mobile/.packages
+program/mobile/build/
