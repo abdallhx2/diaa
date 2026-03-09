@@ -1,82 +1,142 @@
-// ============================================================
-// File: theme.dart
-// Purpose: تعريف ثيم التطبيق — ألوان باستيل، خطوط عربية، تصميم مناسب للأطفال
-// Owner: ديمة — Flutter Lead
-// Branch: feature/flutter-student
-// Week: 1 — إعداد البنية الأساسية للتطبيق
-// ============================================================
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-// --- Required Imports ---
-// import 'package:flutter/material.dart';
-// import 'package:google_fonts/google_fonts.dart';
+class AppTheme {
+  AppTheme._();
 
-// --- Implementation Steps ---
-// Step 1: تعريف لوحة الألوان الأساسية (Pastel colors مناسبة للأطفال)
-//         - static const Color primaryBlue = Color(0xFF4A90D9);    // أزرق ناعم
-//         - static const Color primaryGreen = Color(0xFF66BB6A);   // أخضر ناعم
-//         - static const Color primaryOrange = Color(0xFFFFA726);  // برتقالي ناعم
-//         - static const Color backgroundColor = Color(0xFFF5F7FA); // خلفية فاتحة
-//         - static const Color cardColor = Colors.white;
-//         - static const Color textPrimary = Color(0xFF2C3E50);    // نص أساسي
-//         - static const Color textSecondary = Color(0xFF7F8C8D);  // نص ثانوي
-//         - static const Color errorColor = Color(0xFFE57373);     // أحمر ناعم للأخطاء
-//         - static const Color successColor = Color(0xFF81C784);   // أخضر ناعم للنجاح
+  static const Color primaryBlue     = Color(0xFF4A90D9);
+  static const Color primaryGreen    = Color(0xFF66BB6A);
+  static const Color primaryOrange   = Color(0xFFFFA726);
+  static const Color backgroundColor = Color(0xFFF5F7FA);
+  static const Color cardColor       = Colors.white;
+  static const Color textPrimary     = Color(0xFF2C3E50);
+  static const Color textSecondary   = Color(0xFF7F8C8D);
+  static const Color errorColor      = Color(0xFFE57373);
+  static const Color successColor    = Color(0xFF81C784);
+  static const Color primaryPurple   = Color(0xFFAB8BC9);
+  static const Color primaryPink     = Color(0xFFF48FB1);
+  static const Color dividerColor    = Color(0xFFE0E0E0);
+  static const Color shadowColor     = Color(0x1A000000);
 
-// Step 2: تعريف عائلة الخط العربي
-//         - استخدام Google Fonts — Cairo أو Tajawal
-//         - static TextTheme get arabicTextTheme => GoogleFonts.cairoTextTheme();
-//         - أو GoogleFonts.tajawalTextTheme()
+  static const Color primaryBlue15 = Color(0x264A90D9);
+  static const Color primaryBlue08 = Color(0x144A90D9);
+  static const Color primaryBlue02 = Color(0x054A90D9);
+  static const Color errorColor10  = Color(0x1AE57373);
+  static const Color errorColor40  = Color(0x66E57373);
 
-// Step 3: إنشاء ThemeData مع أحجام نص كبيرة للأطفال
-//         - static ThemeData get lightTheme => ThemeData(
-//             primaryColor: primaryBlue,
-//             colorScheme: ColorScheme.fromSeed(seedColor: primaryBlue),
-//             scaffoldBackgroundColor: backgroundColor,
-//             textTheme: arabicTextTheme.copyWith(
-//               headlineLarge: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-//               headlineMedium: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-//               bodyLarge: TextStyle(fontSize: 20),   // حجم كبير للأطفال
-//               bodyMedium: TextStyle(fontSize: 18),
-//               labelLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-//             ),
-//           );
+  static TextTheme get arabicTextTheme => GoogleFonts.cairoTextTheme();
 
-// Step 4: ثيم الأزرار — ارتفاع لا يقل عن 48dp
-//         - elevatedButtonTheme: ElevatedButtonThemeData(
-//             style: ElevatedButton.styleFrom(
-//               minimumSize: Size(double.infinity, 48),
-//               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-//               textStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-//             ),
-//           ),
+  static ThemeData get lightTheme => ThemeData(
+    useMaterial3: true,
+    primaryColor: primaryBlue,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: primaryBlue,
+      primary:   primaryBlue,
+      secondary: primaryGreen,
+      error:     errorColor,
+      surface:   cardColor,
+    ),
+    scaffoldBackgroundColor: backgroundColor,
 
-// Step 5: ثيم حقول الإدخال مع حدود مستديرة
-//         - inputDecorationTheme: InputDecorationTheme(
-//             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-//             filled: true,
-//             fillColor: Colors.white,
-//             contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-//           ),
+    textTheme: arabicTextTheme.copyWith(
+      displayLarge:  GoogleFonts.cairo(fontSize: 32, fontWeight: FontWeight.bold,  color: textPrimary),
+      displayMedium: GoogleFonts.cairo(fontSize: 28, fontWeight: FontWeight.bold,  color: textPrimary),
+      headlineLarge: GoogleFonts.cairo(fontSize: 28, fontWeight: FontWeight.bold,  color: textPrimary),
+      headlineMedium:GoogleFonts.cairo(fontSize: 24, fontWeight: FontWeight.bold,  color: textPrimary),
+      headlineSmall: GoogleFonts.cairo(fontSize: 20, fontWeight: FontWeight.w600,  color: textPrimary),
+      bodyLarge:     GoogleFonts.cairo(fontSize: 20, color: textPrimary),
+      bodyMedium:    GoogleFonts.cairo(fontSize: 18, color: textPrimary),
+      bodySmall:     GoogleFonts.cairo(fontSize: 16, color: textSecondary),
+      labelLarge:    GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.w600, color: textPrimary),
+      labelMedium:   GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.w500, color: textSecondary),
+    ),
 
-// Step 6: ثيم البطاقات
-//         - cardTheme: CardTheme(
-//             elevation: 2,
-//             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-//             margin: EdgeInsets.all(8),
-//           ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: primaryBlue,
+        foregroundColor: Colors.white,
+        minimumSize: const Size(double.infinity, 48),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 2,
+        textStyle: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.w600),
+      ),
+    ),
 
-// Step 7: ثيم الـ AppBar
-//         - appBarTheme: AppBarTheme(
-//             backgroundColor: primaryBlue,
-//             foregroundColor: Colors.white,
-//             elevation: 0,
-//             centerTitle: true,
-//             titleTextStyle: GoogleFonts.cairo(fontSize: 22, fontWeight: FontWeight.bold),
-//           ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: primaryBlue,
+        minimumSize: const Size(double.infinity, 48),
+        side: const BorderSide(color: primaryBlue, width: 1.5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        textStyle: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.w600),
+      ),
+    ),
 
-// --- Notes ---
-// - جميع الألوان يجب أن تكون باستيل (ناعمة) لتناسب الأطفال
-// - الخطوط يجب أن تكون كبيرة وواضحة
-// - أقل ارتفاع للأزرار 48dp لسهولة اللمس
-// - يمكن إضافة dark theme لاحقاً
-// - تأكد من إضافة google_fonts في pubspec.yaml
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: primaryBlue,
+        minimumSize: const Size(0, 48),
+        textStyle: GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.w600),
+      ),
+    ),
+
+    inputDecorationTheme: InputDecorationTheme(
+      border:            OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: dividerColor)),
+      enabledBorder:      OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: dividerColor)),
+      focusedBorder:      OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: primaryBlue, width: 2)),
+      errorBorder:        OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: errorColor)),
+      focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: errorColor, width: 2)),
+      filled:     true,
+      fillColor:  Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      hintStyle:  GoogleFonts.cairo(fontSize: 16, color: textSecondary),
+      labelStyle: GoogleFonts.cairo(fontSize: 16, color: textSecondary),
+      errorStyle: GoogleFonts.cairo(fontSize: 14, color: errorColor),
+    ),
+
+    cardTheme: const CardThemeData(
+      color:       cardColor,
+      elevation:   2,
+      shadowColor: shadowColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(16)),
+      ),
+      margin: EdgeInsets.all(8),
+    ),
+
+    appBarTheme: AppBarTheme(
+      backgroundColor: primaryBlue,
+      foregroundColor: Colors.white,
+      elevation:   0,
+      centerTitle: true,
+      titleTextStyle: GoogleFonts.cairo(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+      iconTheme: const IconThemeData(color: Colors.white),
+    ),
+
+    bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      backgroundColor:     Colors.white,
+      selectedItemColor:   primaryBlue,
+      unselectedItemColor: textSecondary,
+      selectedLabelStyle:   GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.w600),
+      unselectedLabelStyle: GoogleFonts.cairo(fontSize: 13),
+      type:      BottomNavigationBarType.fixed,
+      elevation: 8,
+    ),
+
+    chipTheme: ChipThemeData(
+      backgroundColor: backgroundColor,
+      selectedColor:   primaryBlue15,
+      labelStyle: GoogleFonts.cairo(fontSize: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    ),
+
+    dividerTheme: const DividerThemeData(
+      color:     dividerColor,
+      thickness: 1,
+      space:     1,
+    ),
+
+    visualDensity: VisualDensity.adaptivePlatformDensity,
+  );
+}

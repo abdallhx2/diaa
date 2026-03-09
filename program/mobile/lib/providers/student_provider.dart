@@ -1,51 +1,108 @@
-// ============================================================
-// File: student_provider.dart
-// Purpose: إدارة حالة الطالب — بيانات لوحة التحكم والجلسات والتقدم
-// Owner: ديمة — Flutter Lead
-// Branch: feature/flutter-student
-// Week: 2 — شاشات الطالب الأساسية
-// ============================================================
+import 'package:flutter/material.dart';
 
-// --- Required Imports ---
-// import 'package:flutter/material.dart';
-// import 'package:edu_smart_assistant/models/student_model.dart';
-// import 'package:edu_smart_assistant/models/session_model.dart';
-// import 'package:edu_smart_assistant/services/student_service.dart';
+class StudentModel {
+  final String  id;
+  final String  name;
+  final String? role;
+  const StudentModel({required this.id, required this.name, this.role});
 
-// --- Implementation Steps ---
-// Step 1: إنشاء class StudentProvider extends ChangeNotifier
-//         - class StudentProvider extends ChangeNotifier { ... }
+  factory StudentModel.fromMap(Map<String, dynamic> map) => StudentModel(
+    id:   map['id']   as String? ?? '',
+    name: map['name'] as String? ?? '',
+    role: map['role'] as String?,
+  );
+}
 
-// Step 2: تعريف الحقول (Fields)
-//         - StudentModel? _studentData;              // بيانات الطالب
-//         - List<SessionModel> _sessions = [];        // قائمة الجلسات
-//         - Map<String, dynamic>? _progress;          // بيانات التقدم
-//         - bool _isLoading = false;
-//         - String? _errorMessage;
-//         - final StudentService _studentService = StudentService();
+class SessionModel {
+  final String   id;
+  final String   lessonId;
+  final DateTime date;
+  const SessionModel({required this.id, required this.lessonId, required this.date});
+}
 
-// Step 3: إنشاء Getters
-//         - StudentModel? get studentData => _studentData;
-//         - List<SessionModel> get sessions => _sessions;
-//         - Map<String, dynamic>? get progress => _progress;
-//         - bool get isLoading => _isLoading;
+class StudentService {
+  Future<Map<String, dynamic>> getDashboard() async => {};
+  Future<List<SessionModel>>   getSessions()  async => [];
+  Future<Map<String, dynamic>> getProgress()  async => {};
+}
 
-// Step 4: إنشاء method fetchDashboard()
-//         - _isLoading = true; notifyListeners();
-//         - استدعاء _studentService.getDashboard()
-//         - تعيين _studentData من الاستجابة
-//         - _isLoading = false; notifyListeners();
+class StudentProvider extends ChangeNotifier {
+  StudentModel?         _studentData;
+  List<SessionModel>    _sessions    = [];
+  Map<String, dynamic>? _progress;
+  bool                  _isLoading   = false;
+  String?               _errorMessage;
+  final StudentService  _studentService = StudentService();
 
-// Step 5: إنشاء method fetchSessions()
-//         - استدعاء _studentService.getSessions()
-//         - تعيين _sessions = قائمة SessionModel من الاستجابة
+  StudentModel?         get studentData  => _studentData;
+  List<SessionModel>    get sessions     => List.unmodifiable(_sessions);
+  Map<String, dynamic>? get progress     => _progress;
+  bool                  get isLoading    => _isLoading;
+  String?               get errorMessage => _errorMessage;
+  bool                  get hasData      => _studentData != null;
+  bool                  get hasSessions  => _sessions.isNotEmpty;
 
-// Step 6: إنشاء method fetchProgress()
-//         - استدعاء _studentService.getProgress()
-//         - تعيين _progress = بيانات التقدم
+  Future<void> fetchDashboard() async {
+    _errorMessage = null;
+    _isLoading    = true;
+    notifyListeners();
 
-// --- Notes ---
-// - يستخدم في student_dashboard_screen.dart
-// - fetchDashboard() يُستدعى عند فتح لوحة الطالب
-// - الجلسات تعرض تاريخ تعلم الطالب
-// - التقدم يعرض الأداء العام
+    try {
+      final Map<String, dynamic> response = await _studentService.getDashboard();
+      _studentData = StudentModel.fromMap(response);
+    } catch (e) {
+      _errorMessage = 'تعذّر تحميل بيانات لوحة التحكم. يرجى المحاولة مجدداً.';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchSessions() async {
+    _errorMessage = null;
+
+    try {
+      _sessions = await _studentService.getSessions();
+    } catch (e) {
+      _errorMessage = 'تعذّر تحميل سجل الجلسات. يرجى المحاولة مجدداً.';
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchProgress() async {
+    _errorMessage = null;
+
+    try {
+      _progress = await _studentService.getProgress();
+    } catch (e) {
+      _errorMessage = 'تعذّر تحميل بيانات التقدم. يرجى المحاولة مجدداً.';
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchAll() async {
+    _errorMessage = null;
+    _isLoading    = true;
+    notifyListeners();
+
+    await Future.wait([
+      fetchDashboard(),
+      fetchSessions(),
+      fetchProgress(),
+    ]);
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  void reset() {
+    _studentData  = null;
+    _sessions     = [];
+    _progress     = null;
+    _isLoading    = false;
+    _errorMessage = null;
+    notifyListeners();
+  }
+}
