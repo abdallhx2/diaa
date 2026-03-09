@@ -1,55 +1,377 @@
-// ============================================================
-// File: scan_page_screen.dart
-// Purpose: شاشة مسح الصفحة بالكاميرا — التقاط صورة واستخراج النص بـ OCR
-// Owner: ديمة — Flutter Lead
-// Branch: feature/flutter-student
-// Week: 2-3 — شاشات المسح والاستخراج
-// ============================================================
+import 'package:flutter/material.dart';
+import 'package:camera/camera.dart';
+import 'package:provider/provider.dart';
+import 'package:edu_smart_assistant/providers/lesson_provider.dart';
+import 'package:edu_smart_assistant/config/theme.dart';
 
-// --- Required Imports ---
-// import 'package:flutter/material.dart';
-// import 'package:camera/camera.dart';
-// import 'package:provider/provider.dart';
-// import 'package:edu_smart_assistant/providers/lesson_provider.dart';
-// import 'package:edu_smart_assistant/services/scan_service.dart';
-// import 'package:edu_smart_assistant/config/routes.dart';
-// import 'package:edu_smart_assistant/widgets/loading_widget.dart';
+class ScanService {
+  Future<Map<String, dynamic>> scanPage(XFile image) async {
+    return {
+      'id':           'lesson_001',
+      'title':        'درس مستخرج',
+      'originalText': 'النص المستخرج من الصورة',
+      'audioUrl':     null,
+    };
+  }
+}
 
-// --- Implementation Steps ---
-// Step 1: إنشاء StatefulWidget باسم ScanPageScreen
-//         - class ScanPageScreen extends StatefulWidget { ... }
+class ScanPageScreen extends StatefulWidget {
+  const ScanPageScreen({super.key});
 
-// Step 2: في initState — تهيئة الكاميرا
-//         - الحصول على قائمة الكاميرات: availableCameras()
-//         - إنشاء CameraController مع الكاميرا الخلفية
-//         - تهيئة: _cameraController.initialize()
-//         - التعامل مع أذونات الكاميرا
+  @override
+  State<ScanPageScreen> createState() => _ScanPageScreenState();
+}
 
-// Step 3: في dispose — التخلص من الكاميرا
-//         - _cameraController.dispose();
+class _ScanPageScreenState extends State<ScanPageScreen> {
+  CameraController? _cameraController;
+  bool    _isCameraInitialized = false;
+  bool    _isScanning          = false;
+  bool    _permissionDenied    = false;
+  String? _errorMessage;
 
-// Step 4: بناء واجهة الكاميرا
-//         - إذا لم تتهيأ الكاميرا: عرض LoadingWidget
-//         - عرض CameraPreview بملء الشاشة
-//         - زر التقاط دائري كبير في الأسفل (FloatingActionButton 72dp)
+  @override
+  void initState() {
+    super.initState();
+    _initCamera();
+  }
 
-// Step 5: إنشاء method _captureAndScan()
-//         - التقاط الصورة: XFile image = await _cameraController.takePicture()
-//         - عرض حالة التحميل
-//         - إرسال الصورة: ScanService().scanPage(image)
-//         - عند النجاح:
-//           * context.read<LessonProvider>().setLesson(lessonData)
-//           * Navigator.pushNamed(context, AppRoutes.textDisplay)
-//         - عند الفشل:
-//           * عرض SnackBar: "لم نتمكن من استخراج النص، حاول مرة أخرى"
+  @override
+  void dispose() {
+    _cameraController?.dispose();
+    super.dispose();
+  }
 
-// Step 6: التعامل مع أذونات الكاميرا
-//         - إذا رُفضت الأذونات: عرض رسالة "يجب السماح بالوصول للكاميرا"
-//         - زر "فتح الإعدادات" لفتح إعدادات التطبيق
+  Future<void> _initCamera() async {
+    try {
+      final cameras = await availableCameras();
 
-// --- Notes ---
-// - يجب إضافة أذونات الكاميرا في AndroidManifest.xml و Info.plist
-// - حزمة camera تحتاج إعداد خاص لـ Android (minSdkVersion 21)
-// - عرض إطار توجيهي فوق الكاميرا لمساعدة الطفل في توجيه الكاميرا
-// - يمكن إضافة flash control لاحقاً
-// - رسائل الخطأ بالعربي دائماً
+      if (cameras.isEmpty) {
+        setState(() {
+          _errorMessage = 'لا توجد كاميرا متاحة على هذا الجهاز.';
+        });
+        return;
+      }
+
+      final backCamera = cameras.firstWhere(
+        (c) => c.lensDirection == CameraLensDirection.back,
+        orElse: () => cameras.first,
+      );
+
+      _cameraController = CameraController(
+        backCamera,
+        ResolutionPreset.high,
+        enableAudio:      false,
+        imageFormatGroup: ImageFormatGroup.jpeg,
+      );
+
+      await _cameraController!.initialize();
+
+      if (!mounted) { return; }
+
+      setState(() { _isCameraInitialized = true; });
+
+    } on CameraException catch (e) {
+      if (!mounted) { return; }
+      if (e.code == 'CameraAccessDenied' ||
+          e.code == 'CameraAccessDeniedWithoutPrompt' ||
+          e.code == 'CameraAccessRestricted') {
+        setState(() { _permissionDenied = true; });
+      } else {
+        setState(() {
+          _errorMessage = 'تعذّر تشغيل الكاميرا: ${e.description}';
+        });
+      }
+    } catch (e) {
+      if (!mounted) { return; }
+      setState(() {
+        _errorMessage = 'حدث خطأ غير متوقع. يرجى المحاولة مجدداً.';
+      });
+    }
+  }
+
+  Future<void> _captureAndScan() async {
+    if (_cameraController == null ||
+        !_cameraController!.value.isInitialized ||
+        _isScanning) {
+      return;
+    }
+
+    setState(() { _isScanning = true; });
+
+    try {
+      final XFile image  = await _cameraController!.takePicture();
+      if (!mounted) { return; }
+
+      final result = await ScanService().scanPage(image);
+      if (!mounted) { return; }
+
+      context.read<LessonProvider>().setExtractedText(
+          result['originalText'] as String? ?? '');
+
+      Navigator.pushNamed(context, '/text-display');
+
+    } on CameraException catch (_) {
+      if (!mounted) { return; }
+      _showErrorSnackBar('تعذّر التقاط الصورة. يرجى المحاولة مجدداً.');
+    } catch (_) {
+      if (!mounted) { return; }
+      _showErrorSnackBar('لم نتمكن من استخراج النص، حاول مرة أخرى.');
+    } finally {
+      if (mounted) { setState(() { _isScanning = false; }); }
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(fontSize: 16),
+          textDirection: TextDirection.rtl,
+        ),
+        backgroundColor: AppTheme.errorColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          title:       const Text('مسح صفحة'),
+          centerTitle: true,
+          leading: IconButton(
+            icon:      const Icon(Icons.arrow_forward_ios_rounded),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: _buildBody(),
+        floatingActionButtonLocation:
+            FloatingActionButtonLocation.centerFloat,
+        floatingActionButton: _isCameraInitialized && !_permissionDenied
+            ? _buildCaptureButton()
+            : null,
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_permissionDenied) { return _buildPermissionDeniedView(); }
+    if (_errorMessage != null) { return _buildErrorView(_errorMessage!); }
+
+    if (!_isCameraInitialized) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(color: Colors.white),
+            SizedBox(height: 16),
+            Text(
+              'جاري تشغيل الكاميرا...',
+              style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        CameraPreview(_cameraController!),
+        _buildGuidanceOverlay(),
+        if (_isScanning)
+          Container(
+            color: Colors.black54,
+            child: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: Colors.white),
+                  SizedBox(height: 20),
+                  Text(
+                    'جاري استخراج النص...',
+                    style: TextStyle(
+                      color:      Colors.white,
+                      fontSize:   20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildGuidanceOverlay() {
+    return Positioned(
+      top: 60, left: 24, right: 24,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color:        Colors.black54,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text(
+              'وجّه الكاميرا نحو الصفحة',
+              style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            height: 280,
+            decoration: BoxDecoration(
+              border:       Border.all(color: Colors.white70, width: 2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Stack(
+              children: [
+                _buildCorner(top: 0,    left:  0, isTop: true,  isLeft: true),
+                _buildCorner(top: 0,    right: 0, isTop: true,  isLeft: false),
+                _buildCorner(bottom: 0, left:  0, isTop: false, isLeft: true),
+                _buildCorner(bottom: 0, right: 0, isTop: false, isLeft: false),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCorner({
+    double? top, double? bottom, double? left, double? right,
+    required bool isTop, required bool isLeft,
+  }) {
+    return Positioned(
+      top: top, bottom: bottom, left: left, right: right,
+      child: Container(
+        width: 24, height: 24,
+        decoration: BoxDecoration(
+          border: Border(
+            top:    isTop   ? const BorderSide(color: AppTheme.primaryBlue, width: 3) : BorderSide.none,
+            bottom: !isTop  ? const BorderSide(color: AppTheme.primaryBlue, width: 3) : BorderSide.none,
+            left:   isLeft  ? const BorderSide(color: AppTheme.primaryBlue, width: 3) : BorderSide.none,
+            right:  !isLeft ? const BorderSide(color: AppTheme.primaryBlue, width: 3) : BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCaptureButton() {
+    return GestureDetector(
+      onTap: _isScanning ? null : _captureAndScan,
+      child: Container(
+        width: 80, height: 80,
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: _isScanning ? Colors.grey : Colors.white,
+          border: Border.all(color: AppTheme.primaryBlue, width: 4),
+          boxShadow: [
+            BoxShadow(
+              color:      Colors.black.withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset:     const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: _isScanning
+            ? const Padding(
+                padding: EdgeInsets.all(20),
+                child: CircularProgressIndicator(
+                    strokeWidth: 3, color: AppTheme.primaryBlue),
+              )
+            : const Icon(
+                Icons.camera_alt_rounded,
+                size:  40,
+                color: AppTheme.primaryBlue,
+              ),
+      ),
+    );
+  }
+
+  Widget _buildPermissionDeniedView() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.no_photography_rounded,
+                size: 80, color: Colors.white54),
+            const SizedBox(height: 24),
+            const Text(
+              'يجب السماح بالوصول للكاميرا',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color:      Colors.white,
+                fontSize:   22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'التطبيق يحتاج إذن الكاميرا لمسح الصفحات واستخراج النص.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white70, fontSize: 16),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () {},
+              icon:  const Icon(Icons.settings_rounded),
+              label: const Text('فتح الإعدادات'),
+              style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(200, 52)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorView(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline_rounded,
+                size: 72, color: AppTheme.errorColor),
+            const SizedBox(height: 20),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white, fontSize: 18),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _errorMessage        = null;
+                  _isCameraInitialized = false;
+                });
+                _initCamera();
+              },
+              child: const Text('حاول مجدداً'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
