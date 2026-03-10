@@ -8,7 +8,7 @@
 
 import type { Metadata } from 'next';
 import { Cairo } from 'next/font/google';
-import { AuthProvider } from '@/context/AuthProvider';
+import { AuthProvider }    from '@/context/AuthProvider';
 
 // Step 1: تعريف خط Cairo العربي باستخدام next/font/google
 const cairo = Cairo({ 
