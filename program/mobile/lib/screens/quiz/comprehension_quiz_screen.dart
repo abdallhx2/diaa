@@ -1,87 +1,197 @@
-// ============================================================
-// File: comprehension_quiz_screen.dart
-// Purpose: شاشة اختبار الاستيعاب — قراءة نص قصير والإجابة عن أسئلة الفهم
-// Owner: حياة — Integration Developer
-// Branch: feature/flutter-services
-// Week: 3 — الاختبارات والمحادثة الذكية
-// ============================================================
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:edu_smart_assistant/providers/quiz_provider.dart';
+import 'package:edu_smart_assistant/config/routes.dart';
 
-// --- Required Imports ---
-// import 'package:flutter/material.dart';
-// import 'package:provider/provider.dart';
-// import 'package:edu_smart_assistant/providers/quiz_provider.dart';
-// import 'package:edu_smart_assistant/config/routes.dart';
-// import 'package:edu_smart_assistant/widgets/quiz_option_widget.dart';
-// import 'package:edu_smart_assistant/widgets/progress_bar_widget.dart';
-// import 'package:edu_smart_assistant/widgets/loading_widget.dart';
+class ComprehensionQuizScreen extends StatefulWidget {
+final String lessonId;
+const ComprehensionQuizScreen({super.key, required this.lessonId});
 
-// --- Implementation Steps ---
-// Step 1: إنشاء StatefulWidget باسم ComprehensionQuizScreen
-//         - class ComprehensionQuizScreen extends StatefulWidget { ... }
+@override
+State<ComprehensionQuizScreen> createState() =>
+_ComprehensionQuizScreenState();
+}
 
-// Step 2: في initState — تحميل أسئلة الاستيعاب
-//         - context.read<QuizProvider>().loadQuizzes(lessonId, 'comprehension');
+class _ComprehensionQuizScreenState extends State<ComprehensionQuizScreen> {
+// Step 3: المتغيرات
+String? _selectedAnswer;
+bool? _isCorrect;
 
-// Step 3: تعريف المتغيرات
-//         - String? _selectedAnswer;
-//         - bool? _isCorrect;
+// Step 2: تحميل الأسئلة لما تفتح الشاشة
+@override
+void initState() {
+super.initState();
+WidgetsBinding.instance.addPostFrameCallback((_) {
+context.read<QuizProvider>().loadQuizzes(widget.lessonId, 'comprehension');
+});
+}
 
-// Step 4: بناء الواجهة (مع إضافة نص مقطع القراءة)
-//         - Scaffold(
-//             appBar: AppBar(title: Text('اختبار الاستيعاب')),
-//             body: Consumer<QuizProvider>(
-//               builder: (_, quizProvider, __) {
-//                 final quiz = quizProvider.currentQuiz;
-//                 return SingleChildScrollView(
-//                   child: Column([
-//                     // شريط التقدم
-//                     ProgressBarWidget(progress: quizProvider.progress, ...),
+// Step 5: اختيار الجواب
+Future<void> _selectAnswer(String answer, String quizId) async {
+setState(() {
+_selectedAnswer = answer;
+});
 
-//                     // مقطع نصي قصير من الدرس (في بطاقة)
-//                     Card(
-//                       margin: EdgeInsets.all(16),
-//                       child: Padding(
-//                         padding: EdgeInsets.all(16),
-//                         child: Text(
-//                           quiz!.questionText.split('---')[0],  // النص قبل الفاصل
-//                           style: TextStyle(fontSize: 18, height: 1.6),
-//                           textDirection: TextDirection.rtl,
-//                         ),
-//                       ),
-//                     ),
+final quizProvider = context.read<QuizProvider>();
+final isCorrect = await quizProvider.submitAnswer(quizId, answer);
 
-//                     // سؤال الاستيعاب
-//                     Padding(
-//                       padding: EdgeInsets.all(16),
-//                       child: Text(
-//                         quiz.questionText.split('---')[1],  // السؤال بعد الفاصل
-//                         style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-//                       ),
-//                     ),
+setState(() {
+_isCorrect = isCorrect;
+});
 
-//                     // 3-4 خيارات
-//                     ...quiz.options.map((option) => Padding(
-//                       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-//                       child: QuizOptionWidget(
-//                         text: option,
-//                         isSelected: _selectedAnswer == option,
-//                         isCorrect: _isCorrect,
-//                         onTap: () => _selectAnswer(option, quiz.id),
-//                       ),
-//                     )),
-//                   ]),
-//                 );
-//               },
-//             ),
-//           )
+// انتظري ثانية ثم انتقلي للسؤال التالي
+await Future.delayed(const Duration(seconds: 1));
 
-// Step 5: إنشاء method _selectAnswer(String answer, String quizId)
-//         - نفس منطق الاختبارات السابقة
+if (quizProvider.isQuizComplete) {
+Navigator.pushReplacementNamed(context, AppRoutes.quizResult);
+} else {
+setState(() {
+_selectedAnswer = null;
+_isCorrect = null;
+quizProvider.nextQuestion();
+});
+}
+}
 
-// --- Notes ---
-// - اختبار الاستيعاب يعرض نص قصير ثم يسأل أسئلة فهم
-// - النص يُعرض في بطاقة منفصلة أعلى السؤال
-// - يمكن أن يكون questionText يحتوي النص والسؤال مفصولين بـ '---'
-// - أو يمكن استخدام حقلين منفصلين من السيرفر
-// - ScrollView ضروري لأن المحتوى قد يكون طويلاً
-// - 5 أسئلة لكل جلسة
+// Step 4: بناء الواجهة
+@override
+Widget build(BuildContext context) {
+return Scaffold(
+backgroundColor: Colors.white,
+appBar: AppBar(
+title: const Text('اختبار الاستيعاب'),
+backgroundColor: const Color(0xFF4A1A7A),
+foregroundColor: Colors.white,
+),
+body: Consumer<QuizProvider>(
+builder: (_, quizProvider, __) {
+// شاشة التحميل
+if (quizProvider.isLoading) {
+return const Center(
+child: CircularProgressIndicator(
+color: Color(0xFF4A1A7A),
+),
+);
+}
+
+final quiz = quizProvider.currentQuiz;
+if (quiz == null) {
+return const Center(child: Text('لا توجد أسئلة'));
+}
+
+// تقسيم النص والسؤال
+final parts = quiz.questionText.split('---');
+final readingText = parts.isNotEmpty ? parts[0].trim() : '';
+final questionText = parts.length > 1 ? parts[1].trim() : quiz.questionText;
+
+return SingleChildScrollView(
+padding: const EdgeInsets.all(16),
+child: Column(
+crossAxisAlignment: CrossAxisAlignment.stretch,
+children: [
+// شريط التقدم
+LinearProgressIndicator(
+value: quizProvider.progress,
+backgroundColor: Colors.grey[200],
+color: const Color(0xFF4A1A7A),
+minHeight: 8,
+),
+
+const SizedBox(height: 8),
+
+// رقم السؤال
+Text(
+'السؤال ${quizProvider.currentIndex + 1} من ${quizProvider.totalQuestions}',
+textAlign: TextAlign.center,
+style: const TextStyle(color: Colors.grey),
+),
+
+const SizedBox(height: 16),
+
+// بطاقة النص المقروء
+Card(
+elevation: 2,
+shape: RoundedRectangleBorder(
+borderRadius: BorderRadius.circular(12),
+),
+child: Padding(
+padding: const EdgeInsets.all(16),
+child: Text(
+readingText,
+style: const TextStyle(
+fontSize: 18,
+height: 1.8,
+),
+textDirection: TextDirection.rtl,
+textAlign: TextAlign.right,
+),
+),
+),
+
+const SizedBox(height: 16),
+
+// السؤال
+Text(
+questionText,
+style: const TextStyle(
+fontSize: 20,
+fontWeight: FontWeight.bold,
+),
+textDirection: TextDirection.rtl,
+textAlign: TextAlign.right,
+),
+
+const SizedBox(height: 16),
+
+// الخيارات
+...quiz.options.map((option) => Padding(
+padding: const EdgeInsets.symmetric(vertical: 6),
+child: GestureDetector(
+onTap: _selectedAnswer == null
+? () => _selectAnswer(option, quiz.id)
+: null,
+child: Container(
+padding: const EdgeInsets.all(16),
+decoration: BoxDecoration(
+color: _getOptionColor(option),
+borderRadius: BorderRadius.circular(12),
+border: Border.all(
+color: _getOptionBorderColor(option),
+width: 2,
+),
+),
+child: Text(
+option,
+style: TextStyle(
+fontSize: 16,
+color: _selectedAnswer == option
+? Colors.white
+: Colors.black87,
+),
+textDirection: TextDirection.rtl,
+textAlign: TextAlign.right,
+),
+),
+),
+)),
+],
+),
+);
+},
+),
+);
+}
+
+// ألوان الخيارات
+Color _getOptionColor(String option) {
+if (_selectedAnswer != option) return Colors.white;
+if (_isCorrect == null) return const Color(0xFF4A1A7A);
+return _isCorrect! ? Colors.green : Colors.red;
+}
+
+Color _getOptionBorderColor(String option) {
+if (_selectedAnswer != option) return Colors.grey[300]!;
+if (_isCorrect == null) return const Color(0xFF4A1A7A);
+return _isCorrect! ? Colors.green : Colors.red;
+}
+}

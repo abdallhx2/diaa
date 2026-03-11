@@ -1,109 +1,132 @@
-// ============================================================
-// File: quiz_result_screen.dart
-// Purpose: شاشة نتيجة الاختبار — عرض الدرجة مع رسوم تحفيزية
-// Owner: حياة — Integration Developer
-// Branch: feature/flutter-services
-// Week: 3 — الاختبارات والمحادثة الذكية
-// ============================================================
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:edu_smart_assistant/providers/quiz_provider.dart';
+import 'package:edu_smart_assistant/config/routes.dart';
 
-// --- Required Imports ---
-// import 'package:flutter/material.dart';
-// import 'package:provider/provider.dart';
-// import 'package:lottie/lottie.dart';
-// import 'package:edu_smart_assistant/providers/quiz_provider.dart';
-// import 'package:edu_smart_assistant/config/routes.dart';
-// import 'package:edu_smart_assistant/config/theme.dart';
-// import 'package:edu_smart_assistant/widgets/custom_button.dart';
+class QuizResultScreen extends StatelessWidget {
+const QuizResultScreen({super.key});
 
-// --- Implementation Steps ---
-// Step 1: إنشاء StatelessWidget باسم QuizResultScreen
-//         - class QuizResultScreen extends StatelessWidget { ... }
-
-// Step 2: قراءة النتيجة من QuizProvider
-//         - final quizProvider = context.read<QuizProvider>();
-//         - double score = quizProvider.score;
-//         - int correct = (score / 100 * 5).round();  // عدد الإجابات الصحيحة
-//         - bool isGoodScore = score >= 60;
+@override
+Widget build(BuildContext context) {
+// Step 2: قراءة النتيجة
+final quizProvider = context.read<QuizProvider>();
+final double score = quizProvider.score;
+final int correct = (score / 100 * 5).round();
+final bool isGoodScore = score >= 60;
 
 // Step 3: بناء الواجهة
-//         - Scaffold(
-//             body: SafeArea(
-//               child: Center(
-//                 child: Column(
-//                   mainAxisAlignment: MainAxisAlignment.center,
-//                   children: [
-//                     // حركة Lottie تحفيزية
-//                     if (isGoodScore)
-//                       // Lottie.asset('assets/animations/celebration.json', width: 200)
-//                       // نجوم واحتفال للنتيجة الجيدة
-//                     else
-//                       // Lottie.asset('assets/animations/encouragement.json', width: 200)
-//                       // تشجيع للنتيجة المنخفضة
+return Scaffold(
+backgroundColor: Colors.white,
+body: SafeArea(
+child: Center(
+child: Padding(
+padding: const EdgeInsets.all(24),
+child: Column(
+mainAxisAlignment: MainAxisAlignment.center,
+children: [
 
-//                     SizedBox(height: 24),
+// أيقونة تحفيزية
+Icon(
+isGoodScore ? Icons.star_rounded : Icons.sentiment_satisfied_alt,
+size: 120,
+color: isGoodScore
+? const Color(0xFFFFD700) // ذهبي للنجاح
+: const Color(0xFF4A1A7A), // بنفسجي للتشجيع
+),
 
-//                     // عرض الدرجة بشكل بارز
-//                     Text(
-//                       '${correct}/5',
-//                       style: TextStyle(fontSize: 64, fontWeight: FontWeight.bold,
-//                         color: isGoodScore ? AppTheme.successColor : AppTheme.primaryOrange),
-//                     ),
-//                     Text(
-//                       '${score.round()}%',
-//                       style: TextStyle(fontSize: 28, color: Colors.grey),
-//                     ),
+const SizedBox(height: 24),
 
-//                     SizedBox(height: 16),
+// الدرجة الكبيرة
+Text(
+'$correct/5',
+style: TextStyle(
+fontSize: 72,
+fontWeight: FontWeight.bold,
+color: isGoodScore ? Colors.green : Colors.orange,
+),
+),
 
-//                     // رسالة تحفيزية
-//                     Text(
-//                       isGoodScore ? 'أحسنت! عمل رائع!' : 'لا بأس، حاول مرة أخرى!',
-//                       style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-//                     ),
+// النسبة المئوية
+Text(
+'${score.round()}%',
+style: const TextStyle(
+fontSize: 28,
+color: Colors.grey,
+),
+),
 
-//                     SizedBox(height: 48),
+const SizedBox(height: 16),
 
-//                     // زر إعادة الاختبار
-//                     Padding(
-//                       padding: EdgeInsets.symmetric(horizontal: 32),
-//                       child: CustomButton(
-//                         text: 'إعادة الاختبار',
-//                         icon: Icons.refresh,
-//                         color: AppTheme.primaryOrange,
-//                         onPressed: () {
-//                           quizProvider.reset();
-//                           Navigator.pop(context);  // العودة لشاشة الاختبار
-//                         },
-//                       ),
-//                     ),
-//                     SizedBox(height: 12),
+// رسالة تحفيزية
+Text(
+isGoodScore ? '🌟 أحسنت! عمل رائع!' : '💪 لا بأس، حاول مرة أخرى!',
+style: const TextStyle(
+fontSize: 24,
+fontWeight: FontWeight.bold,
+),
+textAlign: TextAlign.center,
+),
 
-//                     // زر العودة للوحة
-//                     Padding(
-//                       padding: EdgeInsets.symmetric(horizontal: 32),
-//                       child: CustomButton(
-//                         text: 'العودة للوحة',
-//                         icon: Icons.home,
-//                         color: AppTheme.primaryBlue,
-//                         onPressed: () {
-//                           quizProvider.reset();
-//                           Navigator.pushNamedAndRemoveUntil(
-//                             context, AppRoutes.studentDashboard, (route) => false,
-//                           );
-//                         },
-//                       ),
-//                     ),
-//                   ],
-//                 ),
-//               ),
-//             ),
-//           )
+const SizedBox(height: 48),
 
-// --- Notes ---
-// - النتيجة تُعرض كـ "4/5 = 80%"
-// - Lottie animation: نجوم/احتفال إذا النتيجة >= 60%، تشجيع إذا أقل
-// - أضف ملفات Lottie في: assets/animations/celebration.json و encouragement.json
-// - يمكن تحميل ملفات Lottie مجانية من lottiefiles.com
-// - زران: إعادة الاختبار أو العودة للوحة
-// - quizProvider.reset() يمسح بيانات الاختبار السابق
-// - رسائل تحفيزية بالعربي مناسبة للأطفال
+// زر إعادة الاختبار
+SizedBox(
+width: double.infinity,
+child: ElevatedButton.icon(
+onPressed: () {
+quizProvider.reset();
+Navigator.pop(context);
+},
+icon: const Icon(Icons.refresh),
+label: const Text(
+'إعادة الاختبار',
+style: TextStyle(fontSize: 18),
+),
+style: ElevatedButton.styleFrom(
+backgroundColor: Colors.orange,
+foregroundColor: Colors.white,
+padding: const EdgeInsets.symmetric(vertical: 16),
+shape: RoundedRectangleBorder(
+borderRadius: BorderRadius.circular(12),
+),
+),
+),
+),
+
+const SizedBox(height: 12),
+
+// زر العودة للوحة
+SizedBox(
+width: double.infinity,
+child: ElevatedButton.icon(
+onPressed: () {
+quizProvider.reset();
+Navigator.pushNamedAndRemoveUntil(
+context,
+AppRoutes.studentDashboard,
+(route) => false,
+);
+},
+icon: const Icon(Icons.home),
+label: const Text(
+'العودة للوحة',
+style: TextStyle(fontSize: 18),
+),
+style: ElevatedButton.styleFrom(
+backgroundColor: const Color(0xFF4A1A7A),
+foregroundColor: Colors.white,
+padding: const EdgeInsets.symmetric(vertical: 16),
+shape: RoundedRectangleBorder(
+borderRadius: BorderRadius.circular(12),
+),
+),
+),
+),
+],
+),
+),
+),
+),
+);
+}
+}
