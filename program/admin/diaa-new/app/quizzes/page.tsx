@@ -1,49 +1,58 @@
 // ============================================================
 // File: quizzes/page.tsx
-// Purpose: صفحة قائمة الاختبارات والأسئلة - عرض وتصفية الأسئلة
+// Purpose: صفحة قائمة الاختبارات والأسئلة
 // Owner: جود2 — Admin Developer
 // Branch: feature/admin-content
 // Week: 2 — صفحات المحتوى التعليمي
 // ============================================================
 
-// --- Required Imports ---
-// 'use client';
-// import { useEffect, useState } from 'react';
-// import { useRouter } from 'next/navigation';
-// import DashboardLayout from '@/components/layout/DashboardLayout';
-// import QuizTable from '@/components/quizzes/QuizTable';
-// import Button from '@/components/ui/Button';
-// import { getQuizzes } from '@/services/quizzes';
-// import { Quiz } from '@/types/quiz';
-// import { PlusCircle } from 'lucide-react';
+'use client';
 
-// --- Implementation Steps ---
-// Step 1: إنشاء state variables
-//   - quizzes: Quiz[] (قائمة الأسئلة)
-//   - loading: boolean
-//   - quizTypeFilter: string (تصفية حسب النوع: 'all' | 'reading' | 'writing' | 'comprehension')
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import DashboardLayout from '@/components/layout/DashboardLayout';
+import QuizTable from '@/components/quizzes/QuizTable';
+import Button from '@/components/ui/Button';
+import { getQuizzes } from '@/services/quizzes';
+import { Quiz } from '@/types/quiz';
+import { PlusCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
-// Step 2: جلب الأسئلة عند تحميل الصفحة
-//   - useEffect → getQuizzes({ quiz_type: quizTypeFilter })
-//   - الأسئلة مُجمّعة حسب الدرس (grouped by lesson)
+export default function QuizzesPage() {
+  const router = useRouter();
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [quizTypeFilter, setQuizTypeFilter] = useState('all');
 
-// Step 3: بناء شريط التصفية
-//   - <select> لنوع الاختبار:
-//     - الكل
-//     - قراءة (reading)
-//     - كتابة (writing)
-//     - فهم المقروء (comprehension)
-//   - <Button onClick={() => router.push('/quizzes/new')}>إضافة سؤال</Button>
+  // Step 2: جلب الأسئلة
+  const fetchQuizzes = async () => {
+    setLoading(true);
+    try {
+      const res = await getQuizzes({
+        quiz_type: quizTypeFilter === 'all' ? undefined : quizTypeFilter,
+      });
+      setQuizzes(res);
+    } catch {
+      toast.error('حدث خطأ أثناء جلب الأسئلة');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-// Step 4: عرض جدول الأسئلة
-//   - <QuizTable quizzes={quizzes} onRefresh={fetchQuizzes} />
-//   - الأعمدة: نص السؤال (مقتطع)، النوع (Badge)، اسم الدرس، الإجراءات
+  useEffect(() => {
+    fetchQuizzes();
+  }, [quizTypeFilter]);
 
-// Step 5: حالة فارغة
-//   - لا توجد أسئلة: "لا توجد أسئلة بعد. أضف سؤالاً جديداً."
+  return (
+    <DashboardLayout>
+      <div className="p-6">
 
-// --- Notes ---
-// - لف المحتوى بـ <DashboardLayout>
-// - نوع الاختبار يُعرض كـ Badge ملون (reading=أزرق، writing=أخضر، comprehension=بنفسجي)
-// - يمكن تجميع الأسئلة حسب الدرس في العرض (اختياري)
-// - إضافة سؤال في صفحة منفصلة /quizzes/new
+        {/* Step 3: شريط التصفية */}
+        <div className="flex justify-between items-center mb-6">
+          <select
+            value={quizTypeFilter}
+            onChange={(e) => setQuizTypeFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700"
+          >
+            <option value="all">الكل</option>
+            <option value="reading">قراءة
