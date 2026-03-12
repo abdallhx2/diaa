@@ -1,67 +1,86 @@
-# ============================================================
-# File: routers/auth_router.py
-# Purpose: نقاط نهاية المصادقة — تسجيل الدخول وإدارة الحسابات
-# Owner: مشاعل — Backend Lead
-# Branch: feature/backend-auth
-# Week: Week 1-2 — نظام المصادقة والتسجيل
-# ============================================================
+from fastapi import APIRouter, HTTPException, Request
+from sqlalchemy.orm import Session
+from app.services.auth_service import verify_firebase_token, get_or_create_user, register_parent, add_child_to_parent
+from app.utils.helpers import format_response
+from pydantic import BaseModel
+from typing import Optional
 
-# --- Required Imports ---
-# from fastapi import APIRouter, Depends, HTTPException, Request
-# from sqlalchemy.orm import Session
-# from app.database import get_db
-# from app.services.auth_service import verify_firebase_token, get_or_create_user, register_parent, add_child_to_parent
-# from app.schemas.auth_schema import TokenVerifyRequest, RegisterParentRequest, AddChildRequest, UserResponse, LoginResponse
-# from app.utils.helpers import format_response
+router = APIRouter()
 
-# --- Implementation Steps ---
 
-# Step 1: إنشاء الراوتر
-# - router = APIRouter()
+class TokenVerifyRequest(BaseModel):
+    token: str
+    role: Optional[str] = "student"
 
-# Step 2: POST /verify-token — التحقق من توكن Firebase وإنشاء/جلب المستخدم
-# - @router.post("/verify-token")
-# - استلمي TokenVerifyRequest(token)
-# - استدعي verify_firebase_token(token) للتحقق
-# - استدعي get_or_create_user(firebase_uid, role, name, email) لإنشاء أو جلب المستخدم
-# - ارجعي format_response(True, user_data, "تم التحقق بنجاح")
-# - لو فشل التحقق — ارجعي 401
 
-# Step 3: POST /register-parent — تسجيل حساب ولي أمر جديد
-# - @router.post("/register-parent")
-# - استلمي RegisterParentRequest(name, email, password, phone)
-# - استدعي register_parent(data) لإنشاء الحساب في Firebase + DB
-# - ارجعي format_response(True, parent_data, "تم تسجيل ولي الأمر بنجاح")
-# - لو الإيميل موجود — ارجعي 400
+class RegisterParentRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+    phone: Optional[str] = None
 
-# Step 4: POST /add-child — إضافة طفل لحساب ولي الأمر
-# - @router.post("/add-child")
-# - يحتاج مصادقة (المستخدم الحالي لازم يكون parent)
-# - استلمي AddChildRequest(name, age, grade, learning_level)
-# - parent_id = request.state.user.parent.id
-# - استدعي add_child_to_parent(parent_id, child_data)
-# - ارجعي format_response(True, child_data, "تم إضافة الطفل بنجاح")
 
-# Step 5: GET /me — جلب بيانات المستخدم الحالي
-# - @router.get("/me")
-# - يحتاج مصادقة
-# - user = request.state.user (موجود من auth_middleware)
-# - ارجعي format_response(True, UserResponse.from_orm(user), "بيانات المستخدم")
+class AddChildRequest(BaseModel):
+    name: str
+    age: Optional[int] = None
+    grade: Optional[str] = None
+    learning_level: Optional[str] = None
 
-# --- Dependencies ---
-# - app/services/auth_service.py (جميع دوال المصادقة)
-# - app/schemas/auth_schema.py (الـ schemas للتحقق من البيانات)
-# - app/middleware/auth_middleware.py (التحقق من التوكن)
-# - app/database.py (get_db)
 
-# --- API Endpoints ---
-# POST /api/auth/verify-token   — التحقق من التوكن (عام)
-# POST /api/auth/register-parent — تسجيل ولي أمر (عام)
-# POST /api/auth/add-child       — إضافة طفل (يحتاج مصادقة parent)
-# GET  /api/auth/me              — بيانات المستخدم (يحتاج مصادقة)
+@router.post("/verify-token")
+def verify_token(body: TokenVerifyRequest):
+    try:
+        decoded = verify_firebase_token(body.token)
+        user = get_or_create_user(
+            firebase_uid=decoded["uid"],
+            role=body.role,
+            name=decoded.get("name", ""),
+            email=decoded.get("email", ""),
+        )
+        return format_response(True, {
+            "id": str(user.id),
+            "name": user.name,
+            "email": user.email,
+            "role": user.role,
+        }, "تم التحقق بنجاح")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=str(e))
 
-# --- Notes ---
-# - verify-token و register-parent ما يحتاجون مصادقة (public)
-# - add-child و /me يحتاجون مصادقة
-# - استخدمي دائماً format_response للـ standard response format
-# - { success: bool, data: any, message: str }
+
+@router.post("/register-parent")
+def register_parent_endpoint(body: RegisterParentRequest):
+    try:
+        parent_data = register_parent(body.dict())
+        return format_response(True, parent_data, "تم تسجيل ولي الأمر بنجاح")
+    except Exception as e:
+        if "EMAIL_EXISTS" in str(e):
+            raise HTTPException(status_code=400, detail="البريد الإلكتروني مستخدم بالفعل")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/add-child")
+def add_child(body: AddChildRequest, request: Request):
+    try:
+        user = request.state.user
+        if user.role != "parent":
+            raise HTTPException(status_code=403, detail="هذا الإجراء مخصص لأولياء الأمور فقط")
+        parent_id = str(user.parent.id)
+        child_data = add_child_to_parent(parent_id, body.dict())
+        return format_response(True, child_data, "تم إضافة الطفل بنجاح")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/me")
+def get_me(request: Request):
+    user = request.state.user
+    return format_response(True, {
+        "id": str(user.id),
+        "name": user.name,
+        "email": user.email,
+        "role": user.role,
+        "phone": user.phone,
+        "created_at": str(user.created_at),
+    }, "بيانات المستخدم")

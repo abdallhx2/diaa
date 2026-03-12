@@ -1,60 +1,69 @@
-# ============================================================
-# File: routers/chat_router.py
-# Purpose: نقاط نهاية المحادثة الذكية — AI Chat مع المساعد التعليمي
-# Owner: رنيم — API Developer
-# Branch: feature/backend-routers
-# Week: Week 2 — واجهة المحادثة الذكية
-# ============================================================
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.services.chat_service import ask_question
+from app.models.chat_message import ChatMessage
+from app.models.lesson import Lesson
+from app.utils.helpers import format_response
+from pydantic import BaseModel
+from typing import Optional
+import uuid
 
-# --- Required Imports ---
-# from fastapi import APIRouter, Depends, HTTPException, Request
-# from sqlalchemy.orm import Session
-# from app.database import get_db
-# from app.services.chat_service import ask_question
-# from app.models.chat_message import ChatMessage
-# from app.models.lesson import Lesson
-# from app.schemas.chat_schema import ChatRequest, ChatResponse, ChatHistoryResponse
-# from app.utils.helpers import format_response
+router = APIRouter()
 
-# --- Implementation Steps ---
 
-# Step 1: إنشاء الراوتر
-# - router = APIRouter()
+class ChatRequest(BaseModel):
+    question: str
+    lesson_id: str
 
-# Step 2: POST /ask — إرسال سؤال للمساعد الذكي
-# - @router.post("/ask")
-# - يحتاج مصادقة (student role)
-# - استلمي ChatRequest(question, lesson_id)
-# - اجلبي الدرس من DB بـ lesson_id
-# - لو ما لقيتيه — ارجعي 404
-# - تحققي من عدد الرسائل في هذي الجلسة (أقصى 20 رسالة):
-#   - messages_count = db.query(ChatMessage).filter_by(student_id=..., lesson_id=...).count()
-#   - if messages_count >= 20: ارجعي 429 "تجاوزتِ الحد الأقصى للرسائل"
-# - استدعي ask_question(question, lesson.original_text) من chat_service
-# - احفظي الرسالة في chat_messages:
-#   - ChatMessage(student_id, lesson_id, user_message=question, bot_response=answer)
-# - ارجعي format_response(True, ChatResponse(answer=answer, audio_url=None), "تم الإجابة")
 
-# Step 3: GET /history/{lesson_id} — سجل المحادثة لدرس معين
-# - @router.get("/history/{lesson_id}")
-# - يحتاج مصادقة (student role)
-# - اجلبي جميع الرسائل للطالب الحالي في هذا الدرس
-# - رتبيها بالأقدم أولاً (created_at ASC)
-# - ارجعي format_response(True, ChatHistoryResponse(messages=messages_list), "سجل المحادثة")
+@router.post("/ask")
+def ask(body: ChatRequest, request: Request, db: Session = Depends(get_db)):
+    user = request.state.user
 
-# --- Dependencies ---
-# - app/services/chat_service.py (ask_question)
-# - app/models/chat_message.py (ChatMessage model)
-# - app/models/lesson.py (Lesson model)
-# - app/schemas/chat_schema.py (ChatRequest, ChatResponse, ChatHistoryResponse)
-# - app/database.py (get_db)
+    lesson = db.query(Lesson).filter(Lesson.id == uuid.UUID(body.lesson_id)).first()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="الدرس غير موجود")
 
-# --- API Endpoints ---
-# POST /api/chat/ask                — إرسال سؤال
-# GET  /api/chat/history/{lesson_id} — سجل المحادثة
+    messages_count = db.query(ChatMessage).filter_by(
+        student_id=user.student.id,
+        lesson_id=lesson.id
+    ).count()
 
-# --- Notes ---
-# - الحد الأقصى: 20 رسالة لكل طالب لكل درس
-# - البوت يجاوب فقط من محتوى الدرس (original_text)
-# - لو السؤال خارج الدرس — البوت يرد: "هذا السؤال خارج محتوى الدرس الحالي"
-# - استخدمي format_response دائماً: { success: bool, data: any, message: str }
+    if messages_count >= 20:
+        raise HTTPException(status_code=429, detail="تجاوزتِ الحد الأقصى للرسائل في هذا الدرس")
+
+    answer = ask_question(body.question, lesson.original_text)
+
+    message = ChatMessage(
+        student_id=user.student.id,
+        lesson_id=lesson.id,
+        user_message=body.question,
+        bot_response=answer,
+    )
+    db.add(message)
+    db.commit()
+
+    return format_response(True, {"answer": answer, "audio_url": None}, "تم الإجابة")
+
+
+@router.get("/history/{lesson_id}")
+def get_history(lesson_id: str, request: Request, db: Session = Depends(get_db)):
+    user = request.state.user
+
+    messages = db.query(ChatMessage).filter_by(
+        student_id=user.student.id,
+        lesson_id=uuid.UUID(lesson_id)
+    ).order_by(ChatMessage.created_at.asc()).all()
+
+    messages_list = [
+        {
+            "id": str(m.id),
+            "user_message": m.user_message,
+            "bot_response": m.bot_response,
+            "created_at": str(m.created_at),
+        }
+        for m in messages
+    ]
+
+    return format_response(True, {"messages": messages_list}, "سجل المحادثة")

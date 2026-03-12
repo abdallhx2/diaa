@@ -1,68 +1,127 @@
-# ============================================================
-# File: services/auth_service.py
-# Purpose: خدمة المصادقة — التحقق من توكن Firebase وإدارة المستخدمين
-# Owner: مشاعل — Backend Lead
-# Branch: feature/backend-auth
-# Week: Week 1 — نظام المصادقة
-# ============================================================
+import firebase_admin
+from firebase_admin import auth, credentials
+from sqlalchemy.orm import Session
+from app.database import SessionLocal
+from app.models.user import User, UserRole
+from app.models.parent import Parent
+from app.models.student import Student
+from app.models.admin import Admin
+from app.config import settings
+from app.utils.helpers import generate_uuid
 
-# --- Required Imports ---
-# import firebase_admin
-# from firebase_admin import auth, credentials
-# from sqlalchemy.orm import Session
-# from app.database import SessionLocal
-# from app.models.user import User
-# from app.models.parent import Parent
-# from app.models.student import Student
-# from app.config import settings
-# from app.utils.helpers import generate_uuid
+# تهيئة Firebase Admin SDK مرة واحدة
+if not firebase_admin._apps:
+    cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
+    firebase_admin.initialize_app(cred)
 
-# --- Implementation Steps ---
 
-# Step 1: تهيئة Firebase Admin SDK
-# - cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
-# - firebase_admin.initialize_app(cred)
-# - هذا يتم مرة واحدة عند تحميل الملف
+def verify_firebase_token(token: str) -> dict:
+    decoded_token = auth.verify_id_token(token)
+    return decoded_token
 
-# Step 2: دالة verify_firebase_token(token: str) -> dict
-# - استخدمي auth.verify_id_token(token) من Firebase Admin SDK
-# - ترجع decoded_token اللي يحتوي على: uid, email, name, ...
-# - لو التوكن منتهي أو غير صالح — ارمي Exception
-# - ارجعي decoded_token
 
-# Step 3: دالة get_or_create_user(firebase_uid: str, role: str, name: str, email: str) -> User
-# - ابحثي في DB عن مستخدم بـ firebase_uid
-# - لو موجود — ارجعيه مباشرة
-# - لو مو موجود — أنشئي مستخدم جديد:
-#   - User(id=generate_uuid(), firebase_uid=firebase_uid, role=role, name=name, email=email)
-#   - لو role == "student" — أنشئي Student record مرتبط
-#   - لو role == "parent" — أنشئي Parent record مرتبط
-#   - لو role == "admin" — أنشئي Admin record مرتبط
-#   - db.add(user) → db.commit()
-# - ارجعي المستخدم
+def get_or_create_user(firebase_uid: str, role: str, name: str, email: str) -> User:
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.firebase_uid == firebase_uid).first()
+        if user:
+            return user
 
-# Step 4: دالة register_parent(data: dict) -> dict
-# - أنشئي حساب في Firebase: auth.create_user(email=data.email, password=data.password, display_name=data.name)
-# - أنشئي مستخدم في DB بـ role="parent"
-# - أنشئي Parent record مرتبط
-# - ارجعي بيانات ولي الأمر
+        user = User(
+            firebase_uid=firebase_uid,
+            role=UserRole(role),
+            name=name,
+            email=email,
+        )
+        db.add(user)
+        db.flush()
 
-# Step 5: دالة add_child_to_parent(parent_id: UUID, child_data: dict) -> dict
-# - أنشئي حساب Firebase للطفل (أو استخدمي حساب ولي الأمر)
-# - أنشئي User بـ role="student"
-# - أنشئي Student record بـ parent_id
-# - حدثي num_children في Parent record (+1)
-# - db.commit()
-# - ارجعي بيانات الطفل
+        if role == "student":
+            student = Student(user_id=user.id)
+            db.add(student)
+        elif role == "parent":
+            parent = Parent(user_id=user.id)
+            db.add(parent)
+        elif role == "admin":
+            admin = Admin(user_id=user.id)
+            db.add(admin)
 
-# --- Dependencies ---
-# - app/config.py (settings — Firebase credentials path)
-# - app/database.py (SessionLocal)
-# - app/models/user.py, parent.py, student.py, admin.py
-# - app/utils/helpers.py (generate_uuid)
+        db.commit()
+        db.refresh(user)
+        return user
+    finally:
+        db.close()
 
-# --- Notes ---
-# - Firebase Admin SDK لازم يتهيأ مرة واحدة فقط
-# - verify_firebase_token تتحقق من: صلاحية التوكن + عدم انتهاء الصلاحية
-# - get_or_create_user تضمن ما يتكرر المستخدم في DB
-# - استخدمي try/except حول Firebase calls عشان تعاملين الأخطاء بشكل مناسب
+
+def register_parent(data: dict) -> dict:
+    firebase_user = auth.create_user(
+        email=data["email"],
+        password=data["password"],
+        display_name=data["name"],
+    )
+
+    db = SessionLocal()
+    try:
+        user = User(
+            firebase_uid=firebase_user.uid,
+            role=UserRole.parent,
+            name=data["name"],
+            email=data["email"],
+            phone=data.get("phone"),
+        )
+        db.add(user)
+        db.flush()
+
+        parent = Parent(user_id=user.id)
+        db.add(parent)
+        db.commit()
+        db.refresh(user)
+
+        return {
+            "id": str(user.id),
+            "name": user.name,
+            "email": user.email,
+            "role": user.role,
+        }
+    finally:
+        db.close()
+
+
+def add_child_to_parent(parent_id: str, child_data: dict) -> dict:
+    db = SessionLocal()
+    try:
+        firebase_user = auth.create_user(
+            display_name=child_data["name"],
+        )
+
+        user = User(
+            firebase_uid=firebase_user.uid,
+            role=UserRole.student,
+            name=child_data["name"],
+        )
+        db.add(user)
+        db.flush()
+
+        student = Student(
+            user_id=user.id,
+            parent_id=parent_id,
+            age=child_data.get("age"),
+            grade=child_data.get("grade"),
+            learning_level=child_data.get("learning_level"),
+        )
+        db.add(student)
+
+        parent = db.query(Parent).filter(Parent.id == parent_id).first()
+        if parent:
+            parent.num_children = (parent.num_children or 0) + 1
+
+        db.commit()
+        db.refresh(user)
+
+        return {
+            "id": str(user.id),
+            "name": user.name,
+            "role": user.role,
+        }
+    finally:
+        db.close()

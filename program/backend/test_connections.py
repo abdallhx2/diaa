@@ -136,34 +136,31 @@ def test_azure_tts():
 
 
 # ─────────────────────────────────────────────
-# 5. اختبار OpenAI
+# 5. اختبار Gemini
 # ─────────────────────────────────────────────
-def test_openai():
-    header("5. OpenAI GPT-4o-mini (الدردشة الذكية)")
+def test_gemini():
+    header("5. Gemini AI (الدردشة الذكية)")
     try:
-        from openai import OpenAI
+        from google import genai
         import os
         from dotenv import load_dotenv
         load_dotenv()
 
-        api_key = os.getenv("OPENAI_API_KEY")
+        api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
-            fail("OPENAI_API_KEY غير موجود في .env")
+            fail("GEMINI_API_KEY غير موجود في .env")
             return False
 
-        client = OpenAI(api_key=api_key)
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": "قل: مرحبا"}],
-            max_tokens=10,
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model="gemini-flash-latest",
+            contents="قل: مرحبا"
         )
-        answer = response.choices[0].message.content
-        ok(f"OpenAI يعمل — الرد: {answer}")
+        ok(f"Gemini يعمل — الرد: {response.text}")
         return True
     except Exception as e:
-        fail("فشل الاتصال بـ OpenAI", str(e))
+        fail("فشل الاتصال بـ Gemini", str(e))
         return False
-
 
 # ─────────────────────────────────────────────
 # 6. اختبار FastAPI Server
@@ -196,7 +193,7 @@ if __name__ == "__main__":
     results["Firebase"] = test_firebase()
     results["EasyOCR"] = test_easyocr()
     results["Azure TTS"] = test_azure_tts()
-    results["OpenAI"] = test_openai()
+    results["Gemini"] = test_gemini()
     results["FastAPI"] = test_fastapi()
 
     # ─── الملخص ───
