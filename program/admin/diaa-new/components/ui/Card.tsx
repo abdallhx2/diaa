@@ -6,35 +6,33 @@
 // Week: 1 — بناء مكونات UI الأساسية
 // ============================================================
 
-// --- Required Imports ---
-// import { LucideIcon } from 'lucide-react';  // نوع الأيقونة
+// Step 1: الاستيرادات
+import { LucideIcon } from 'lucide-react';
 
-// --- Implementation Steps ---
-// Step 1: تعريف Props
-//   - interface CardProps {
-//       children: React.ReactNode;
-//       title?: string;
-//       className?: string;
-//       icon?: LucideIcon;    // أيقونة اختيارية بجانب العنوان
-//     }
+// Step 2: تعريف Props
+interface CardProps {
+  children: React.ReactNode;
+  title?: string;
+  className?: string;
+  icon?: LucideIcon;
+}
 
-// Step 2: بناء المكون
-//   - <div className={`bg-white rounded-lg shadow-md p-6 ${className}`}>
-//     - إذا كان هناك عنوان:
-//       <div className="flex items-center gap-2 mb-4">
-//         {icon && <Icon className="h-5 w-5 text-primary-600" />}
-//         <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
-//       </div>
-//     - {children}
-//   - </div>
+// Step 3 + 4: بناء المكون وتصديره
+export default function Card({ children, title, className = '', icon: Icon }: CardProps) {
+  return (
+    <div className={`bg-white rounded-lg shadow-md p-6 ${className}`}>
+      {title && (
+        <div className="flex items-center gap-2 mb-4">
+          {Icon && <Icon className="h-5 w-5 text-primary-600" />}
+          <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
 
-// Step 3: التصدير
-//   - export default function Card({ children, title, className = '', icon: Icon }: CardProps)
-
-// --- Notes ---
-// - البطاقة بسيطة ومرنة — تُستخدم في Dashboard stats, forms, sections
-// - shadow-md يعطي ظل متوسط — يمكن تغييره حسب الاستخدام
-// - rounded-lg للزوايا المدورة
-// - className prop يسمح بتخصيص إضافي من الخارج
-// - الأيقونة اختيارية — تُعرض فقط إذا مُررت
-// - يمكن إضافة prop footer لمحتوى أسفل البطاقة (مستقبلي)
+// --- أمثلة الاستخدام ---
+// <Card title="إحصائيات">...</Card>
+// <Card title="الدروس" icon={BookOpen}>...</Card>
+// <Card className="mt-4">...</Card>

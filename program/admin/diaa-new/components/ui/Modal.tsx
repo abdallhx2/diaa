@@ -6,53 +6,80 @@
 // Week: 1 — بناء مكونات UI الأساسية
 // ============================================================
 
-// --- Required Imports ---
-// 'use client';
-// import { useEffect, useRef } from 'react';
-// import { X } from 'lucide-react';
+'use client';
 
-// --- Implementation Steps ---
-// Step 1: تعريف Props
-//   - interface ModalProps {
-//       isOpen: boolean;
-//       onClose: () => void;
-//       title: string;
-//       children: React.ReactNode;
-//       footer?: React.ReactNode;    // أزرار أسفل النافذة (اختياري)
-//     }
+// Step 1: الاستيرادات
+import { useEffect } from 'react';
+import { X } from 'lucide-react';
 
-// Step 2: التحكم بفتح/إغلاق النافذة
-//   - if (!isOpen) return null;
-//   - أغلق عند الضغط على Escape:
-//     useEffect → document.addEventListener('keydown', (e) => e.key === 'Escape' && onClose())
-//   - أغلق عند النقر على الخلفية (backdrop)
+// Step 2: تعريف Props
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+}
 
-// Step 3: بناء طبقة الخلفية (Overlay)
-//   - <div className="fixed inset-0 z-50 flex items-center justify-center">
-//   - <div className="fixed inset-0 bg-black/50" onClick={onClose} />  // backdrop
+// Step 3 + 4 + 5 + 6: بناء المكون وتصديره
+export default function Modal({ isOpen, onClose, title, children, footer }: ModalProps) {
 
-// Step 4: بناء بطاقة النافذة
-//   - <div className="relative z-50 bg-white rounded-lg shadow-xl w-full max-w-md mx-4 animate-in">
-//   - رأس النافذة: عنوان + زر إغلاق (X)
-//     <div className="flex items-center justify-between p-4 border-b">
-//       <h2 className="text-lg font-bold">{title}</h2>
-//       <button onClick={onClose}><X size={20} /></button>
-//     </div>
-//   - محتوى النافذة: <div className="p-4">{children}</div>
-//   - ذيل النافذة (اختياري): {footer && <div className="p-4 border-t flex gap-2 justify-end">{footer}</div>}
+  // Step 3: إغلاق عند Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
-// Step 5: Animation (اختياري لكن مُحبذ)
-//   - الظهور: animate-in — scale من 95% إلى 100% + opacity من 0 إلى 1
-//   - يمكن استخدام Tailwind animation أو CSS keyframes
-//   - الخلفية: transition من شفاف إلى bg-black/50
+  // Step 4: إخفاء النافذة إذا مغلقة
+  if (!isOpen) return null;
 
-// Step 6: التصدير
-//   - export default function Modal({ isOpen, onClose, title, children, footer }: ModalProps)
+  return (
+    // Step 5: طبقة الخلفية
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
 
-// --- Notes ---
-// - z-50 لضمان ظهور النافذة فوق كل شيء
-// - النقر على الخلفية يُغلق — لكن النقر على البطاقة لا يُغلق (e.stopPropagation)
-// - Escape key للإغلاق — مهم للوصولية (accessibility)
-// - max-w-md حجم مناسب — يمكن إضافة prop size لأحجام مختلفة
-// - تأكد من تنظيف event listener في cleanup function لـ useEffect
-// - يمكن استخدام Portal (createPortal) لعرض Modal خارج DOM tree الحالي
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/50"
+        onClick={onClose}
+      />
+
+      {/* Step 6: بطاقة النافذة */}
+      <div
+        className="relative z-50 bg-white rounded-lg shadow-xl w-full max-w-md mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* الرأس */}
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-lg font-bold text-gray-800">{title}</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* المحتوى */}
+        <div className="p-4">{children}</div>
+
+        {/* الذيل (اختياري) */}
+        {footer && (
+          <div className="p-4 border-t flex gap-2 justify-end">
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// --- أمثلة الاستخدام ---
+// <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="تأكيد الحذف">
+//   <p>هل أنت متأكد؟</p>
+// </Modal>
+//
+// <Modal
+//   isOpen={is
