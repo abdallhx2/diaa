@@ -1,69 +1,120 @@
-// ============================================================
-// File: quiz_provider.dart
-// Purpose: إدارة حالة الاختبارات — الأسئلة، الإجابات، النتيجة
-// Owner: ديمة — Flutter Lead
-// Branch: feature/flutter-student
-// Week: 3 — شاشات الاختبارات والمحادثة الذكية
-// ============================================================
+import 'package:flutter/material.dart';
 
-// --- Required Imports ---
-// import 'package:flutter/material.dart';
-// import 'package:edu_smart_assistant/models/quiz_model.dart';
-// import 'package:edu_smart_assistant/models/quiz_result_model.dart';
-// import 'package:edu_smart_assistant/services/quiz_service.dart';
+class QuizModel {
+  final String id;
+  final String question;
+  final List<String> options;
+  const QuizModel({required this.id, required this.question, required this.options});
+}
 
-// --- Implementation Steps ---
-// Step 1: إنشاء class QuizProvider extends ChangeNotifier
-//         - class QuizProvider extends ChangeNotifier { ... }
+class QuizResultModel {
+  final double score;
+  final Map<String, dynamic> details;
+  const QuizResultModel({required this.score, this.details = const {}});
+}
 
-// Step 2: تعريف الحقول (Fields)
-//         - List<QuizModel> _quizzes = [];           // قائمة الأسئلة
-//         - int _currentQuizIndex = 0;                // رقم السؤال الحالي
-//         - Map<String, String> _answers = {};        // إجابات الطالب: { quizId: answer }
-//         - double _score = 0.0;                      // النتيجة النهائية
-//         - bool _isCompleted = false;                // هل انتهى الاختبار؟
-//         - bool _isLoading = false;
-//         - final QuizService _quizService = QuizService();
+class QuizService {
+  Future<List<QuizModel>> getByType({required String lessonId, required String type}) async => [];
+  Future<QuizResultModel> submitQuiz({
+    required List<String> quizIds,
+    required Map<String, String> answers,
+  }) async => const QuizResultModel(score: 0.0);
+}
 
-// Step 3: إنشاء Getters
-//         - List<QuizModel> get quizzes => _quizzes;
-//         - int get currentQuizIndex => _currentQuizIndex;
-//         - QuizModel? get currentQuiz => _quizzes.isNotEmpty ? _quizzes[_currentQuizIndex] : null;
-//         - Map<String, String> get answers => _answers;
-//         - double get score => _score;
-//         - bool get isCompleted => _isCompleted;
-//         - bool get isLoading => _isLoading;
-//         - int get totalQuestions => _quizzes.length;
-//         - double get progress => _quizzes.isEmpty ? 0 : (_currentQuizIndex + 1) / _quizzes.length;
+class QuizProvider extends ChangeNotifier {
+  List<QuizModel>     _quizzes          = [];
+  int                 _currentQuizIndex = 0;
+  Map<String, String> _answers          = {};
+  double              _score            = 0.0;
+  bool                _isCompleted      = false;
+  bool                _isLoading        = false;
+  String?             _errorMessage;
+  QuizResultModel?    _lastResult;
+  final QuizService   _quizService      = QuizService();
 
-// Step 4: إنشاء method loadQuizzes(String lessonId, String type)
-//         - _isLoading = true; notifyListeners();
-//         - استدعاء _quizService.getByType(type) أو getQuizzes(lessonId)
-//         - _quizzes = القائمة المُرجعة
-//         - _currentQuizIndex = 0; _answers = {}; _isCompleted = false;
-//         - _isLoading = false; notifyListeners();
+  List<QuizModel>     get quizzes          => List.unmodifiable(_quizzes);
+  int                 get currentQuizIndex => _currentQuizIndex;
+  Map<String, String> get answers          => Map.unmodifiable(_answers);
+  double              get score            => _score;
+  bool                get isCompleted      => _isCompleted;
+  bool                get isLoading        => _isLoading;
+  String?             get errorMessage     => _errorMessage;
+  QuizResultModel?    get lastResult       => _lastResult;
+  int                 get totalQuestions   => _quizzes.length;
 
-// Step 5: إنشاء method submitAnswer(String quizId, String answer)
-//         - _answers[quizId] = answer;
-//         - إذا _currentQuizIndex < _quizzes.length - 1:
-//           * _currentQuizIndex++; notifyListeners();
-//         - إلا:
-//           * استدعاء calculateResult()
+  QuizModel? get currentQuiz =>
+      _quizzes.isNotEmpty ? _quizzes[_currentQuizIndex] : null;
 
-// Step 6: إنشاء method calculateResult()
-//         - إرسال الإجابات للسيرفر: _quizService.submitQuiz(...)
-//         - _score = النتيجة المُرجعة من السيرفر
-//         - _isCompleted = true;
-//         - notifyListeners();
+  double get progress =>
+      _quizzes.isEmpty ? 0.0 : (_currentQuizIndex + 1) / _quizzes.length;
 
-// Step 7: إنشاء method reset()
-//         - _quizzes = []; _currentQuizIndex = 0;
-//         - _answers = {}; _score = 0.0; _isCompleted = false;
-//         - notifyListeners();
+  bool get currentQuizAnswered =>
+      currentQuiz != null && _answers.containsKey(currentQuiz!.id);
 
-// --- Notes ---
-// - يدعم 3 أنواع اختبارات: reading, writing, comprehension
-// - 5 أسئلة لكل جلسة اختبار (من constants.dart)
-// - الإجابة الصحيحة لا تُعرف محلياً — السيرفر يحسب النتيجة
-// - progress يُستخدم لعرض شريط التقدم "سؤال 3 من 5"
-// - reset() يُستدعى عند بدء اختبار جديد أو العودة للوحة
+  Future<void> loadQuizzes(String lessonId, String type) async {
+    _errorMessage = null;
+    _isLoading    = true;
+    notifyListeners();
+
+    try {
+      final List<QuizModel> result =
+          await _quizService.getByType(lessonId: lessonId, type: type);
+      _quizzes          = result;
+      _currentQuizIndex = 0;
+      _answers          = {};
+      _isCompleted      = false;
+      _score            = 0.0;
+      _lastResult       = null;
+    } catch (e) {
+      _errorMessage = 'تعذّر تحميل أسئلة الاختبار. يرجى المحاولة مجدداً.';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> submitAnswer(String quizId, String answer) async {
+    _answers[quizId] = answer;
+
+    if (_currentQuizIndex < _quizzes.length - 1) {
+      _currentQuizIndex++;
+      notifyListeners();
+    } else {
+      notifyListeners();
+      await calculateResult();
+    }
+  }
+
+  Future<void> calculateResult() async {
+    _errorMessage = null;
+    _isLoading    = true;
+    notifyListeners();
+
+    try {
+      final QuizResultModel result = await _quizService.submitQuiz(
+        quizIds: _quizzes.map((q) => q.id).toList(),
+        answers: _answers,
+      );
+      _lastResult  = result;
+      _score       = result.score;
+      _isCompleted = true;
+    } catch (e) {
+      _errorMessage = 'تعذّر إرسال إجاباتك. يرجى التحقق من الاتصال والمحاولة مجدداً.';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void reset() {
+    _quizzes          = [];
+    _currentQuizIndex = 0;
+    _answers          = {};
+    _score            = 0.0;
+    _isCompleted      = false;
+    _isLoading        = false;
+    _errorMessage     = null;
+    _lastResult       = null;
+    notifyListeners();
+  }
+}
