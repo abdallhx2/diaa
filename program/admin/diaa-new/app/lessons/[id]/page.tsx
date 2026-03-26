@@ -6,48 +6,51 @@
 // Week: 2 — صفحات المحتوى التعليمي
 // ============================================================
 
-// --- Required Imports ---
-// 'use client';
-// import { useEffect, useState } from 'react';
-// import { useParams, useRouter } from 'next/navigation';
-// import DashboardLayout from '@/components/layout/DashboardLayout';
-// import LessonForm from '@/components/lessons/LessonForm';
-// import Button from '@/components/ui/Button';
-// import Modal from '@/components/ui/Modal';
-// import { getLessonById, updateLesson, deleteLesson } from '@/services/lessons';
-// import { Lesson } from '@/types/lesson';
-// import { Trash2 } from 'lucide-react';
-// import { toast } from 'sonner';
+'use client';
 
-// --- Implementation Steps ---
-// Step 1: الحصول على معرف الدرس من URL params
-//   - const params = useParams();
-//   - const lessonId = params.id as string;
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import DashboardLayout from '@/components/layout/DashboardLayout';
+import LessonForm from '@/components/lessons/LessonForm';
+import Button from '@/components/ui/Button';
+import Modal from '@/components/ui/Modal';
+import { getLessonById, updateLesson, deleteLesson } from '@/services/lessons';
+import { Lesson } from '@/types/lesson';
+import { Trash2, ArrowRight } from 'lucide-react';
+import { toast } from 'sonner';
 
-// Step 2: إنشاء state variables
-//   - lesson: Lesson | null
-//   - loading: boolean
-//   - isDeleteModalOpen: boolean
+export default function EditLessonPage() {
+  const params = useParams();
+  const router = useRouter();
+  const lessonId = params.id as string;
 
-// Step 3: جلب بيانات الدرس عند تحميل الصفحة
-//   - useEffect → getLessonById(lessonId)
-//   - تعبئة lesson من الاستجابة
+  // Step 2: State Variables
+  const [lesson, setLesson] = useState<Lesson | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
-// Step 4: عرض نموذج التعديل مُعبأ بالبيانات
-//   - <LessonForm initialData={lesson} onSubmit={handleUpdate} isEditing={true} />
+  // Step 3: جلب بيانات الدرس
+  useEffect(() => {
+    const fetchLesson = async () => {
+      try {
+        const res = await getLessonById(lessonId);
+        setLesson(res);
+      } catch {
+        toast.error('حدث خطأ أثناء جلب بيانات الدرس');
+        router.push('/lessons');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLesson();
+  }, [lessonId]);
 
-// Step 5: معالجة حفظ التعديلات (handleUpdate)
-//   - updateLesson(lessonId, data) → PUT /api/admin/lessons/{id}
-//   - عند النجاح: toast.success('تم تحديث الدرس بنجاح')
-//   - عند الخطأ: toast.error('حدث خطأ أثناء التحديث')
-
-// Step 6: زر الحذف مع نافذة التأكيد
-//   - <Button variant="danger">حذف الدرس</Button>
-//   - Modal: "هل أنت متأكد من حذف هذا الدرس؟"
-//   - تأكيد → deleteLesson(lessonId) → router.push('/lessons')
-
-// --- Notes ---
-// - لف المحتوى بـ <DashboardLayout>
-// - عند حذف درس، تُحذف أيضاً الأسئلة المرتبطة به (من الباك اند)
-// - أضف زر عودة للقائمة في أعلى الصفحة
-// - Loading skeleton أثناء جلب البيانات
+  // Step 5: معالجة التعديل
+  const handleUpdate = async (data: any) => {
+    try {
+      await updateLesson(lessonId, data);
+      toast.success('تم تحديث الدرس بنجاح');
+      router.push('/lessons');
+    } catch {
+      toast.error('حدث خطأ أث

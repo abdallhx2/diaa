@@ -6,35 +6,52 @@
 // Week: 2 — صفحات المحتوى التعليمي
 // ============================================================
 
-// --- Required Imports ---
-// 'use client';
-// import { useRouter } from 'next/navigation';
-// import DashboardLayout from '@/components/layout/DashboardLayout';
-// import LessonForm from '@/components/lessons/LessonForm';
-// import { createLesson } from '@/services/lessons';
-// import { LessonCreateRequest } from '@/types/lesson';
-// import { toast } from 'sonner';
+'use client';
 
-// --- Implementation Steps ---
-// Step 1: إنشاء الصفحة مع DashboardLayout
-//   - عنوان الصفحة: "إضافة درس جديد"
+import { useRouter } from 'next/navigation';
+import DashboardLayout from '@/components/layout/DashboardLayout';
+import LessonForm from '@/components/lessons/LessonForm';
+import { createLesson } from '@/services/lessons';
+import { LessonCreateRequest } from '@/types/lesson';
+import { toast } from 'sonner';
+import { ArrowRight } from 'lucide-react';
 
-// Step 2: عرض نموذج الدرس فارغاً
-//   - <LessonForm onSubmit={handleCreate} />
-//   - النموذج بدون بيانات مبدئية (وضع الإنشاء)
+export default function NewLessonPage() {
+  const router = useRouter();
 
-// Step 3: معالجة إرسال النموذج (handleCreate)
-//   - async function handleCreate(data: LessonCreateRequest)
-//   - استدعاء createLesson(data) → POST /api/admin/lessons
-//   - عند النجاح: toast.success('تم إضافة الدرس بنجاح')
-//   - عند النجاح: router.push('/lessons') → العودة لقائمة الدروس
-//   - عند الخطأ: toast.error('حدث خطأ أثناء إضافة الدرس')
+  // Step 3: معالجة إرسال النموذج
+  const handleCreate = async (data: LessonCreateRequest) => {
+    try {
+      await createLesson(data);
+      toast.success('تم إضافة الدرس بنجاح');
+      router.push('/lessons');
+    } catch {
+      toast.error('حدث خطأ أثناء إضافة الدرس');
+    }
+  };
 
-// Step 4: زر العودة لقائمة الدروس
-//   - رابط أو زر في الأعلى: "← العودة للدروس"
+  return (
+    <DashboardLayout>
+      <div className="p-6">
 
-// --- Notes ---
-// - لف المحتوى بـ <DashboardLayout>
-// - LessonForm هو نفس المكون المستخدم في الإنشاء والتعديل
-// - تأكد من validation قبل الإرسال (يتم في LessonForm)
-// - toast من مكتبة sonner لإظهار إشعارات النجاح/الخطأ
+        {/* Step 4: زر العودة */}
+        <button
+          onClick={() => router.push('/lessons')}
+          className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-6"
+        >
+          <ArrowRight className="h-4 w-4" />
+          العودة للدروس
+        </button>
+
+        {/* Step 1: عنوان الصفحة */}
+        <h1 className="text-2xl font-bold text-gray-800 mb-6">إضافة درس جديد</h1>
+
+        {/* Step 2: النموذج */}
+        <div className="max-w-2xl">
+          <LessonForm onSubmit={handleCreate} />
+        </div>
+
+      </div>
+    </DashboardLayout>
+  );
+}
