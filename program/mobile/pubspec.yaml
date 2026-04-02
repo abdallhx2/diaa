@@ -17,32 +17,33 @@ dependencies:
 
   # --- HTTP & Networking ---
   dio: ^5.4.0
-  connectivity_plus: ^5.0.2
+  connectivity_plus: ^7.0.0
+  google_fonts: ^6.2.1
 
   # --- Firebase ---
-  firebase_core: ^2.24.2
-  firebase_auth: ^4.16.0
-  firebase_storage: ^11.6.0
+  firebase_core: ^4.5.0
+  firebase_auth: ^6.2.0
+  firebase_storage: ^13.1.0
 
   # --- Camera & Scanner ---
-  camera: ^0.10.5+9
-  mobile_scanner: ^4.0.1
+  camera: ^0.12.0
+  mobile_scanner: ^7.2.0
   image_picker: ^1.0.7
+  permission_handler: ^11.3.1
 
   # --- Audio ---
-  just_audio: ^0.9.36
+  just_audio: ^0.10.5
   audio_video_progress_bar: ^2.0.3
 
   # --- UI & Design ---
-  google_fonts: ^6.1.0
   flutter_svg: ^2.0.9
   lottie: ^3.0.0
 
   # --- Charts & Visualization ---
-  fl_chart: ^0.66.2
+  fl_chart: ^1.1.1
 
   # --- Localization & Formatting ---
-  intl: ^0.19.0
+  intl: 0.20.2
 
   # --- Local Storage ---
   shared_preferences: ^2.2.2
@@ -50,12 +51,12 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.1
+  flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true
 
   assets:
     - assets/images/
-    - assets/animations/
+   # - assets/animations/
     - assets/icons/

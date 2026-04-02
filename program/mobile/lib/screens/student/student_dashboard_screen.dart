@@ -3,14 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:edu_smart_assistant/providers/auth_provider.dart';
 import 'package:edu_smart_assistant/providers/student_provider.dart';
 import 'package:edu_smart_assistant/config/theme.dart';
-
-class AppRoutes {
-  static const String roleSelection = '/role-selection';
-  static const String scanPage      = '/scan-page';
-  static const String scanQR        = '/scan-qr';
-  static const String uploadFile    = '/upload-file';
-  static const String quizSelection = '/quiz-selection';
-}
+import 'package:edu_smart_assistant/config/routes.dart';
 
 class _CardColors {
   final Color base;
@@ -108,7 +101,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           automaticallyImplyLeading: false,
           actions: [
             IconButton(
-              icon:     const Icon(Icons.logout_rounded),
+              icon:    const Icon(Icons.logout_rounded),
               tooltip: 'تسجيل الخروج',
               onPressed: _logout,
             ),
@@ -139,9 +132,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     ),
                     Expanded(
                       child: GridView.count(
-                        crossAxisCount:  2,
+                        crossAxisCount:   2,
                         padding:          const EdgeInsets.all(16),
-                        mainAxisSpacing: 16,
+                        mainAxisSpacing:  16,
                         crossAxisSpacing: 16,
                         children: [
                           _buildDashboardCard(
@@ -183,9 +176,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: AppTheme.errorColor10,
+                            color:        AppTheme.errorColor10,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppTheme.errorColor40),
+                            border:       Border.all(color: AppTheme.errorColor40),
                           ),
                           child: Row(
                             children: [
@@ -196,7 +189,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                                 child: Text(
                                   studentProvider.errorMessage!,
                                   style: const TextStyle(
-                                    color:     AppTheme.errorColor,
+                                    color:    AppTheme.errorColor,
                                     fontSize: 15,
                                   ),
                                 ),
@@ -213,9 +206,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   }
 
   Widget _buildDashboardCard({
-    required String     title,
-    required IconData   icon,
-    required _CardColors  colors,
+    required String      title,
+    required IconData    icon,
+    required _CardColors colors,
     required VoidCallback onTap,
   }) {
     return Card(
@@ -224,9 +217,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16)),
       child: InkWell(
-        onTap:           onTap,
-        borderRadius:    BorderRadius.circular(16),
-        splashColor:     colors.splash,
+        onTap:          onTap,
+        borderRadius:   BorderRadius.circular(16),
+        splashColor:    colors.splash,
         highlightColor: colors.highlight,
         child: Container(
           decoration: BoxDecoration(
@@ -256,7 +249,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 style: const TextStyle(
                   fontSize:   20,
                   fontWeight: FontWeight.bold,
-                  color:       AppTheme.textPrimary,
+                  color:      AppTheme.textPrimary,
                 ),
               ),
             ],
