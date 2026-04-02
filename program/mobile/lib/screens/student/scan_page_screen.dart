@@ -1,19 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:edu_smart_assistant/providers/lesson_provider.dart';
+import 'package:edu_smart_assistant/services/scan_service.dart';
 import 'package:edu_smart_assistant/config/theme.dart';
-
-class ScanService {
-  Future<Map<String, dynamic>> scanPage(XFile image) async {
-    return {
-      'id':           'lesson_001',
-      'title':        'درس مستخرج',
-      'originalText': 'النص المستخرج من الصورة',
-      'audioUrl':     null,
-    };
-  }
-}
 
 class ScanPageScreen extends StatefulWidget {
   const ScanPageScreen({super.key});
@@ -99,7 +90,7 @@ class _ScanPageScreenState extends State<ScanPageScreen> {
     setState(() { _isScanning = true; });
 
     try {
-      final XFile image  = await _cameraController!.takePicture();
+      final XFile image = await _cameraController!.takePicture();
       if (!mounted) { return; }
 
       final result = await ScanService().scanPage(image);
@@ -331,7 +322,7 @@ class _ScanPageScreenState extends State<ScanPageScreen> {
             ),
             const SizedBox(height: 32),
             ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: () => openAppSettings(),
               icon:  const Icon(Icons.settings_rounded),
               label: const Text('فتح الإعدادات'),
               style: ElevatedButton.styleFrom(

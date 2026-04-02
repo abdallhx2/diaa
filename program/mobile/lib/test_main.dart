@@ -64,7 +64,7 @@ class _TestHomePageState extends State<TestHomePage> {
   Future<void> _testBackend() async {
     try {
       // TODO: غيّر الرابط حسب بيئتك
-      const apiUrl = 'http://10.0.2.2:8000'; // Android emulator → localhost
+     //const apiUrl = 'http://10.0.2.2:8000'; // Android emulator → localhost
       // const apiUrl = 'http://localhost:8000'; // iOS simulator / Web
 
       // استخدم http package بدل dio للاختبار البسيط
