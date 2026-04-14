@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:edu_smart_assistant/providers/lesson_provider.dart';
+import 'package:edu_smart_assistant/services/tts_service.dart';
 import 'package:edu_smart_assistant/config/theme.dart';
-
-class TtsService {
-  Future<String?> generateAudio(String text) async {
-    return null;
-  }
-}
 
 class TextDisplayScreen extends StatefulWidget {
   const TextDisplayScreen({super.key});
@@ -17,8 +12,8 @@ class TextDisplayScreen extends StatefulWidget {
 }
 
 class _TextDisplayScreenState extends State<TextDisplayScreen> {
-  bool _isGeneratingAudio = false;
-  bool _isPlaying         = false;
+  bool    _isGeneratingAudio = false;
+  bool    _isPlaying         = false;
   String? _audioError;
 
   @override
@@ -32,8 +27,8 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
   Future<void> _generateAudioIfNeeded() async {
     final lessonProvider = context.read<LessonProvider>();
 
-    if (lessonProvider.hasAudio) return;
-    if (lessonProvider.extractedText == null) return;
+    if (lessonProvider.hasAudio) { return; }
+    if (lessonProvider.extractedText == null) { return; }
 
     setState(() {
       _isGeneratingAudio = true;
@@ -44,13 +39,13 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
       final url = await TtsService()
           .generateAudio(lessonProvider.extractedText!);
 
-      if (!mounted) return;
+      if (!mounted) { return; }
 
       if (url != null) {
         lessonProvider.setAudioUrl(url);
       }
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() {
         _audioError = 'تعذّر توليد الصوت. سيتم عرض النص فقط.';
       });
@@ -73,11 +68,9 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
       child: Scaffold(
         backgroundColor: AppTheme.backgroundColor,
         appBar: AppBar(
-          title: Text(
-            lessonProvider.currentLesson?.title ?? 'الدرس',
-          ),
+          title: Text(lessonProvider.currentLesson?.title ?? 'الدرس'),
           leading: IconButton(
-            icon: const Icon(Icons.arrow_forward_ios_rounded),
+            icon:      const Icon(Icons.arrow_forward_ios_rounded),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -92,7 +85,7 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
                           'لا يوجد نص لعرضه.',
                           style: TextStyle(
                             fontSize: 18,
-                            color: AppTheme.textSecondary,
+                            color:    AppTheme.textSecondary,
                           ),
                         ),
                       )
@@ -100,9 +93,9 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
                         extractedText,
                         textDirection: TextDirection.rtl,
                         style: const TextStyle(
-                          fontSize:  22,
-                          height:    1.8,
-                          color:     AppTheme.textPrimary,
+                          fontSize: 22,
+                          height:   1.8,
+                          color:    AppTheme.textPrimary,
                         ),
                       ),
               ),
@@ -127,7 +120,7 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
                       'جاري توليد الصوت...',
                       style: TextStyle(
                         fontSize: 16,
-                        color: AppTheme.textSecondary,
+                        color:    AppTheme.textSecondary,
                       ),
                     ),
                   ],
@@ -181,8 +174,8 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
 }
 
 class _AudioPlayerWidget extends StatelessWidget {
-  final String   audioUrl;
-  final bool     isPlaying;
+  final String       audioUrl;
+  final bool         isPlaying;
   final VoidCallback onToggle;
 
   const _AudioPlayerWidget({
@@ -194,7 +187,7 @@ class _AudioPlayerWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      margin:  const EdgeInsets.fromLTRB(16, 0, 16, 8),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
         color:        Colors.white,

@@ -1,17 +1,5 @@
 import 'package:flutter/material.dart';
-
-class LessonModel {
-  final String  id;
-  final String  title;
-  final String? originalText;
-  final String? audioUrl;
-  const LessonModel({
-    required this.id,
-    required this.title,
-    this.originalText,
-    this.audioUrl,
-  });
-}
+import 'package:edu_smart_assistant/models/lesson_model.dart';
 
 class LessonProvider extends ChangeNotifier {
   LessonModel? _currentLesson;
@@ -19,11 +7,11 @@ class LessonProvider extends ChangeNotifier {
   String?      _audioUrl;
   bool         _isLoading = false;
 
-  LessonModel? get currentLesson   => _currentLesson;
-  String?      get extractedText   => _extractedText;
-  String?      get audioUrl        => _audioUrl;
-  bool         get isLoading       => _isLoading;
-  bool         get hasLesson       => _currentLesson != null;
+  LessonModel? get currentLesson    => _currentLesson;
+  String?      get extractedText    => _extractedText;
+  String?      get audioUrl         => _audioUrl;
+  bool         get isLoading        => _isLoading;
+  bool         get hasLesson        => _currentLesson != null;
   bool         get hasExtractedText => _extractedText != null && _extractedText!.isNotEmpty;
   bool         get hasAudio         => _audioUrl != null && _audioUrl!.isNotEmpty;
 

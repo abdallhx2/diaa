@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:provider/provider.dart';
@@ -90,14 +91,16 @@ class _ScanPageScreenState extends State<ScanPageScreen> {
     setState(() { _isScanning = true; });
 
     try {
-      final XFile image = await _cameraController!.takePicture();
+      final XFile xfile     = await _cameraController!.takePicture();
+      final File  imageFile = File(xfile.path);
+
       if (!mounted) { return; }
 
-      final result = await ScanService().scanPage(image);
+      final lesson = await ScanService().scanPage(imageFile);
+
       if (!mounted) { return; }
 
-      context.read<LessonProvider>().setExtractedText(
-          result['originalText'] as String? ?? '');
+      context.read<LessonProvider>().setLesson(lesson);
 
       Navigator.pushNamed(context, '/text-display');
 

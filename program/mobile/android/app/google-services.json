@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1090272509190",
+    "project_id": "edu-smart-assistant",
+    "storage_bucket": "edu-smart-assistant.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1090272509190:android:fb10ae0d6a1e8529dab287",
+        "android_client_info": {
+          "package_name": "com.example.edu_smart_assistant"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDEFhDYBV1U6Tkr99NDTmm5rcWjupYpHko"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
