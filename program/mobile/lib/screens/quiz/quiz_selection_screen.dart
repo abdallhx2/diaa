@@ -1,92 +1,139 @@
-// ============================================================
-// File: quiz_selection_screen.dart
-// Purpose: شاشة اختيار نوع الاختبار — قراءة/كتابة/استيعاب
-// Owner: حياة — Integration Developer
-// Branch: feature/flutter-services
-// Week: 3 — الاختبارات والمحادثة الذكية
-// ============================================================
+import 'package:flutter/material.dart';
+import 'package:edu_smart_assistant/config/routes.dart';
 
-// --- Required Imports ---
-// import 'package:flutter/material.dart';
-// import 'package:edu_smart_assistant/config/routes.dart';
-// import 'package:edu_smart_assistant/config/theme.dart';
+class QuizSelectionScreen extends StatelessWidget {
+final String lessonId;
+const QuizSelectionScreen({super.key, required this.lessonId});
 
-// --- Implementation Steps ---
-// Step 1: إنشاء StatelessWidget باسم QuizSelectionScreen
-//         - class QuizSelectionScreen extends StatelessWidget { ... }
+@override
+Widget build(BuildContext context) {
+return Scaffold(
+backgroundColor: Colors.white,
+appBar: AppBar(
+title: const Text('اختر نوع الاختبار'),
+backgroundColor: const Color(0xFF4A1A7A),
+foregroundColor: Colors.white,
+),
+body: Padding(
+padding: const EdgeInsets.all(16),
+child: Column(
+mainAxisAlignment: MainAxisAlignment.center,
+children: [
 
-// Step 2: بناء الواجهة
-//         - Scaffold(
-//             appBar: AppBar(title: Text('اختر نوع الاختبار')),
-//             body: Padding(
-//               padding: EdgeInsets.all(16),
-//               child: Column(
-//                 mainAxisAlignment: MainAxisAlignment.center,
-//                 children: [
-//                   _buildQuizTypeCard(...),  // القراءة
-//                   SizedBox(height: 16),
-//                   _buildQuizTypeCard(...),  // الكتابة
-//                   SizedBox(height: 16),
-//                   _buildQuizTypeCard(...),  // الاستيعاب
-//                 ],
-//               ),
-//             ),
-//           )
+// Step 3: اختبار القراءة
+_buildQuizTypeCard(
+context: context,
+icon: Icons.menu_book,
+title: 'اختبار القراءة',
+description: 'اقرأ الكلمات واختر النطق الصحيح',
+color: const Color(0xFF4A1A7A),
+onTap: () => Navigator.pushNamed(
+context,
+AppRoutes.readingQuiz,
+arguments: lessonId,
+),
+),
 
-// Step 3: إنشاء بطاقة "اختبار القراءة"
-//         - _buildQuizTypeCard(
-//             icon: Icons.menu_book,
-//             title: 'اختبار القراءة',
-//             description: 'اقرأ الكلمات واختر النطق الصحيح',
-//             color: AppTheme.primaryBlue,
-//             onTap: () => Navigator.pushNamed(context, AppRoutes.readingQuiz),
-//           )
+const SizedBox(height: 16),
 
-// Step 4: إنشاء بطاقة "اختبار الكتابة"
-//         - _buildQuizTypeCard(
-//             icon: Icons.edit_note,
-//             title: 'اختبار الكتابة',
-//             description: 'أجب عن أسئلة الكتابة',
-//             color: AppTheme.primaryGreen,
-//             onTap: () => Navigator.pushNamed(context, AppRoutes.writingQuiz),
-//           )
+// Step 4: اختبار الكتابة
+_buildQuizTypeCard(
+context: context,
+icon: Icons.edit_note,
+title: 'اختبار الكتابة',
+description: 'أجب عن أسئلة الكتابة',
+color: Colors.green,
+onTap: () => Navigator.pushNamed(
+context,
+AppRoutes.writingQuiz,
+arguments: lessonId,
+),
+),
 
-// Step 5: إنشاء بطاقة "اختبار الاستيعاب"
-//         - _buildQuizTypeCard(
-//             icon: Icons.psychology,
-//             title: 'اختبار الاستيعاب',
-//             description: 'اقرأ النص وأجب عن الأسئلة',
-//             color: AppTheme.primaryOrange,
-//             onTap: () => Navigator.pushNamed(context, AppRoutes.comprehensionQuiz),
-//           )
+const SizedBox(height: 16),
 
-// Step 6: إنشاء method _buildQuizTypeCard(...)
-//         - Card(
-//             elevation: 4,
-//             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-//             child: InkWell(
-//               onTap: onTap,
-//               child: Padding(
-//                 padding: EdgeInsets.all(20),
-//                 child: Row(children: [
-//                   Container(
-//                     padding: EdgeInsets.all(12),
-//                     decoration: BoxDecoration(color: color.withOpacity(0.2), borderRadius: ...),
-//                     child: Icon(icon, size: 48, color: color),
-//                   ),
-//                   SizedBox(width: 16),
-//                   Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-//                     Text(title, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-//                     Text(description, style: TextStyle(fontSize: 14, color: Colors.grey)),
-//                   ]),
-//                 ]),
-//               ),
-//             ),
-//           )
+// Step 5: اختبار الاستيعاب
+_buildQuizTypeCard(
+context: context,
+icon: Icons.psychology,
+title: 'اختبار الاستيعاب',
+description: 'اقرأ النص وأجب عن الأسئلة',
+color: Colors.orange,
+onTap: () => Navigator.pushNamed(
+context,
+AppRoutes.comprehensionQuiz,
+arguments: lessonId,
+),
+),
+],
+),
+),
+);
+}
 
-// --- Notes ---
-// - 3 أنواع اختبارات مرتبطة بالدرس الحالي
-// - كل بطاقة بلون باستيل مختلف
-// - أيقونات كبيرة (48px) ونصوص واضحة
-// - يمكن تمرير lessonId كـ argument لشاشات الاختبار
-// - التصميم RTL مع ألوان مناسبة للأطفال
+// Step 6: بناء بطاقة نوع الاختبار
+Widget _buildQuizTypeCard({
+required BuildContext context,
+required IconData icon,
+required String title,
+required String description,
+required Color color,
+required VoidCallback onTap,
+}) {
+return Card(
+elevation: 4,
+shape: RoundedRectangleBorder(
+borderRadius: BorderRadius.circular(16),
+),
+child: InkWell(
+onTap: onTap,
+borderRadius: BorderRadius.circular(16),
+child: Padding(
+padding: const EdgeInsets.all(20),
+child: Row(
+textDirection: TextDirection.rtl,
+children: [
+// الأيقونة
+Container(
+padding: const EdgeInsets.all(12),
+decoration: BoxDecoration(
+color: color.withOpacity(0.15),
+borderRadius: BorderRadius.circular(12),
+),
+child: Icon(icon, size: 48, color: color),
+),
+
+const SizedBox(width: 16),
+
+// العنوان والوصف
+Expanded(
+child: Column(
+crossAxisAlignment: CrossAxisAlignment.end,
+children: [
+Text(
+title,
+style: const TextStyle(
+fontSize: 22,
+fontWeight: FontWeight.bold,
+),
+textAlign: TextAlign.right,
+),
+const SizedBox(height: 4),
+Text(
+description,
+style: const TextStyle(
+fontSize: 14,
+color: Colors.grey,
+),
+textAlign: TextAlign.right,
+),
+],
+),
+),
+],
+),
+),
+),
+);
+}
+}
