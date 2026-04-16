@@ -4,8 +4,23 @@ import 'package:camera/camera.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:edu_smart_assistant/providers/lesson_provider.dart';
-import 'package:edu_smart_assistant/services/scan_service.dart';
+import 'package:edu_smart_assistant/models/lesson_model.dart';
 import 'package:edu_smart_assistant/config/theme.dart';
+
+// TODO: replace with import 'package:edu_smart_assistant/services/scan_service.dart';
+// when حياة merges scan_service.dart to develop
+class ScanService {
+  Future<LessonModel> scanPage(File imageFile) async {
+    return LessonModel(
+      id:           'lesson_001',
+      title:        'درس مستخرج',
+      subject:      '',
+      gradeLevel:   '',
+      originalText: 'النص المستخرج من الصورة',
+      createdAt:    DateTime.now(),
+    );
+  }
+}
 
 class ScanPageScreen extends StatefulWidget {
   const ScanPageScreen({super.key});

@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:edu_smart_assistant/providers/lesson_provider.dart';
-import 'package:edu_smart_assistant/services/tts_service.dart';
 import 'package:edu_smart_assistant/config/theme.dart';
+
+// TODO: replace with import 'package:edu_smart_assistant/services/tts_service.dart';
+// when حياة merges tts_service.dart to develop
+class TtsService {
+  Future<String?> generateAudio(String text) async {
+    return null;
+  }
+}
 
 class TextDisplayScreen extends StatefulWidget {
   const TextDisplayScreen({super.key});
