@@ -23,10 +23,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_initialized) return;
+    if (_initialized) { return; }
     _initialized = true;
 
-    final args = ModalRoute.of(context)?.settings.arguments;
+    final args           = ModalRoute.of(context)?.settings.arguments;
     final lessonProvider = context.read<LessonProvider>();
 
     if (args is Map<String, dynamic>) {
@@ -59,7 +59,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   Future<void> _sendMessage() async {
     final question = _messageController.text.trim();
-    if (question.isEmpty) return;
+    if (question.isEmpty) { return; }
 
     final chatProvider = context.read<ChatProvider>();
 
@@ -96,7 +96,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
         appBar: AppBar(
           title: const Text('المساعد الذكي'),
           leading: IconButton(
-            icon: const Icon(Icons.arrow_forward_ios_rounded),
+            icon:      const Icon(Icons.arrow_forward_ios_rounded),
             onPressed: () {
               context.read<ChatProvider>().clearChat();
               Navigator.pop(context);
@@ -125,15 +125,13 @@ class _AiChatScreenState extends State<AiChatScreen> {
         return Container(
           width:   double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          color:   isLow
-              ? AppTheme.errorColor10
-              : AppTheme.primaryBlue08,
+          color:   isLow ? AppTheme.errorColor10 : AppTheme.primaryBlue08,
           child: Text(
             'الرسائل المتبقية: $remaining / $_maxMessages',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 13,
-              color:    isLow ? AppTheme.errorColor : AppTheme.primaryBlue,
+              fontSize:   13,
+              color:      isLow ? AppTheme.errorColor : AppTheme.primaryBlue,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -169,20 +167,20 @@ class _AiChatScreenState extends State<AiChatScreen> {
         }
 
         return ListView.builder(
-          controller:   _scrollController,
-          padding:      const EdgeInsets.symmetric(
-              horizontal: 16, vertical: 12),
-          itemCount:    chatProvider.messages.length,
-          itemBuilder:  (_, index) {
+          controller:  _scrollController,
+          padding:     const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          itemCount:   chatProvider.messages.length,
+          itemBuilder: (_, index) {
             final msg = chatProvider.messages[index];
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _ChatBubble(
-                  message:  msg.question,
-                  isUser:   true,
-                  timestamp: msg.timestamp,
-                ),
+                if (msg.isFromUser)
+                  _ChatBubble(
+                    message:   msg.question,
+                    isUser:    true,
+                    timestamp: msg.timestamp,
+                  ),
                 if (!msg.isFromUser && msg.answer.isNotEmpty)
                   _ChatBubble(
                     message:   msg.answer,
@@ -201,18 +199,16 @@ class _AiChatScreenState extends State<AiChatScreen> {
   Widget _buildLoadingIndicator() {
     return Consumer<ChatProvider>(
       builder: (_, chatProvider, __) {
-        if (!chatProvider.isLoading) return const SizedBox.shrink();
+        if (!chatProvider.isLoading) { return const SizedBox.shrink(); }
         return Container(
-          padding: const EdgeInsets.symmetric(
-              horizontal: 20, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           color: Colors.white,
           child: const Row(
             children: [
               SizedBox(
                 width: 18, height: 18,
                 child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: AppTheme.primaryBlue),
+                    strokeWidth: 2, color: AppTheme.primaryBlue),
               ),
               SizedBox(width: 12),
               Text(
@@ -255,18 +251,18 @@ class _AiChatScreenState extends State<AiChatScreen> {
             children: [
               Expanded(
                 child: TextField(
-                  controller:    _messageController,
-                  textDirection: TextDirection.rtl,
-                  enabled:       canSend,
-                  maxLines:      3,
-                  minLines:      1,
+                  controller:      _messageController,
+                  textDirection:   TextDirection.rtl,
+                  enabled:         canSend,
+                  maxLines:        3,
+                  minLines:        1,
                   textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => canSend ? _sendMessage() : null,
+                  onSubmitted:     (_) => canSend ? _sendMessage() : null,
                   decoration: InputDecoration(
-                    hintText:    'اكتب سؤالك هنا...',
+                    hintText:          'اكتب سؤالك هنا...',
                     hintTextDirection: TextDirection.rtl,
-                    filled:      true,
-                    fillColor:   AppTheme.backgroundColor,
+                    filled:            true,
+                    fillColor:         AppTheme.backgroundColor,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(24),
                       borderSide:   BorderSide.none,
@@ -319,20 +315,15 @@ class _ChatBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Align(
-      alignment: isUser
-          ? Alignment.centerLeft
-          : Alignment.centerRight,
+      alignment: isUser ? Alignment.centerLeft : Alignment.centerRight,
       child: Container(
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(
-            horizontal: 16, vertical: 12),
+        margin:  const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isUser
-              ? AppTheme.primaryBlue
-              : Colors.white,
+          color: isUser ? AppTheme.primaryBlue : Colors.white,
           borderRadius: BorderRadius.only(
             topRight:    const Radius.circular(16),
             topLeft:     const Radius.circular(16),
@@ -365,9 +356,7 @@ class _ChatBubble extends StatelessWidget {
               '${timestamp.minute.toString().padLeft(2, '0')}',
               style: TextStyle(
                 fontSize: 11,
-                color:    isUser
-                    ? Colors.white70
-                    : AppTheme.textSecondary,
+                color:    isUser ? Colors.white70 : AppTheme.textSecondary,
               ),
             ),
           ],

@@ -1,10 +1,26 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:edu_smart_assistant/providers/lesson_provider.dart';
-import 'package:edu_smart_assistant/services/scan_service.dart';
+import 'package:edu_smart_assistant/models/lesson_model.dart';
 import 'package:edu_smart_assistant/config/theme.dart';
+
+// TODO: replace with import 'package:edu_smart_assistant/services/scan_service.dart';
+// when حياة merges scan_service.dart to develop
+class ScanService {
+  Future<LessonModel> scanPage(File imageFile) async {
+    return LessonModel(
+      id:           'lesson_001',
+      title:        'درس مستخرج',
+      subject:      '',
+      gradeLevel:   '',
+      originalText: 'النص المستخرج من الصورة',
+      createdAt:    DateTime.now(),
+    );
+  }
+}
 
 class ScanPageScreen extends StatefulWidget {
   const ScanPageScreen({super.key});
@@ -90,14 +106,16 @@ class _ScanPageScreenState extends State<ScanPageScreen> {
     setState(() { _isScanning = true; });
 
     try {
-      final XFile image = await _cameraController!.takePicture();
+      final XFile xfile     = await _cameraController!.takePicture();
+      final File  imageFile = File(xfile.path);
+
       if (!mounted) { return; }
 
-      final result = await ScanService().scanPage(image);
+      final lesson = await ScanService().scanPage(imageFile);
+
       if (!mounted) { return; }
 
-      context.read<LessonProvider>().setExtractedText(
-          result['originalText'] as String? ?? '');
+      context.read<LessonProvider>().setLesson(lesson);
 
       Navigator.pushNamed(context, '/text-display');
 
