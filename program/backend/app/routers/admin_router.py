@@ -1,91 +1,160 @@
-# ============================================================
-# File: routers/admin_router.py
-# Purpose: نقاط نهاية لوحة تحكم المشرف — إدارة المستخدمين والدروس والسجلات
-# Owner: رنيم — API Developer
-# Branch: feature/backend-routers
-# Week: Week 2 — واجهات المشرف
-# ============================================================
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from datetime import datetime, timedelta, timezone
+from uuid import UUID
+from typing import Optional
 
-# --- Required Imports ---
-# from fastapi import APIRouter, Depends, HTTPException, Request
-# from sqlalchemy.orm import Session
-# from app.database import get_db
-# from app.models.user import User
-# from app.models.lesson import Lesson
-# from app.models.system_log import SystemLog
-# from app.models.learning_session import LearningSession
-# from app.schemas.admin_schema import AdminDashboard, SystemSettings
-# from app.schemas.auth_schema import UserResponse
-# from app.schemas.lesson_schema import LessonCreate, LessonResponse, LessonUpdate
-# from app.utils.helpers import format_response
+from app.database import get_db
+from app.models.user import User
+from app.models.lesson import Lesson
+from app.models.system_log import SystemLog
+from app.models.learning_session import LearningSession
+from app.schemas.lesson_schema import LessonCreate, LessonResponse, LessonUpdate
+from app.utils.helpers import format_response
 
-# --- Implementation Steps ---
+router = APIRouter()
 
-# Step 1: إنشاء الراوتر
-# - router = APIRouter()
+# التحقق من صلاحية المشرف
+def require_admin(request: Request):
+    user = request.state.user
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="غير مصرح")
 
-# Step 2: إنشاء dependency للتحقق من صلاحية المشرف
-# - def require_admin(request: Request):
-# -     if request.state.user.role != "admin": raise HTTPException(403)
-# - استخدميها في كل endpoint: Depends(require_admin)
+# GET /dashboard
+@router.get("/dashboard")
+def get_dashboard(
+    request: Request,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin)
+):
+    now = datetime.now(timezone.utc)
+    week_ago = now - timedelta(days=7)
+    month_ago = now - timedelta(days=30)
 
-# Step 3: GET /dashboard — لوحة تحكم المشرف (إحصائيات النظام)
-# - @router.get("/dashboard", dependencies=[Depends(require_admin)])
-# - احسبي: total_users (عدد المستخدمين الكلي)
-# - احسبي: active_users_7d (المستخدمين النشطين آخر 7 أيام)
-# - احسبي: total_sessions_week (الجلسات هذا الأسبوع)
-# - احسبي: total_sessions_month (الجلسات هذا الشهر)
-# - احسبي: avg_response_time (متوسط وقت الاستجابة من system_logs)
-# - ارجعي format_response(True, AdminDashboard(...), "إحصائيات النظام")
+    total_users = db.query(User).count()
+    active_users_7d = db.query(User).filter(User.last_login >= week_ago).count()
+    total_sessions_week = db.query(LearningSession).filter(LearningSession.created_at >= week_ago).count()
+    total_sessions_month = db.query(LearningSession).filter(LearningSession.created_at >= month_ago).count()
 
-# Step 4: CRUD للمستخدمين
-# - GET    /users         — قائمة جميع المستخدمين (مع pagination)
-# - POST   /users         — إنشاء مستخدم جديد (للمشرف فقط)
-# - PUT    /users/{id}    — تعديل بيانات مستخدم
-# - DELETE /users/{id}    — حذف مستخدم (soft delete: is_active = False)
+    data = {
+        "total_users": total_users,
+        "active_users_7d": active_users_7d,
+        "total_sessions_week": total_sessions_week,
+        "total_sessions_month": total_sessions_month,
+    }
+    return format_response(True, data, "إحصائيات النظام")
 
-# Step 5: CRUD للدروس
-# - GET    /lessons       — قائمة جميع الدروس (مع pagination)
-# - POST   /lessons       — إنشاء درس جديد (استلمي LessonCreate)
-# - PUT    /lessons/{id}  — تعديل درس (استلمي LessonUpdate)
-# - DELETE /lessons/{id}  — حذف درس
+# GET /users
+@router.get("/users")
+def get_users(
+    request: Request,
+    page: int = 1,
+    per_page: int = 10,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin)
+):
+    skip = (page - 1) * per_page
+    users = db.query(User).offset(skip).limit(per_page).all()
+    return format_response(True, [u.__dict__ for u in users], "قائمة المستخدمين")
 
-# Step 6: GET /logs — سجلات النظام
-# - @router.get("/logs", dependencies=[Depends(require_admin)])
-# - دعمي الفلترة بـ query parameters:
-#   - action: str (مثل: "login", "scan_text")
-#   - user_id: UUID (سجلات مستخدم معين)
-#   - date_from, date_to: datetime (نطاق تاريخي)
-#   - page, per_page: int (pagination)
-# - ارجعي format_response(True, logs_list, "سجلات النظام")
+# DELETE /users/{id} — soft delete
+@router.delete("/users/{user_id}")
+def delete_user(
+    user_id: UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin)
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+    user.is_active = False
+    db.commit()
+    return format_response(True, None, "تم حذف المستخدم")
 
-# Step 7: إعدادات النظام
-# - GET /settings  — جلب الإعدادات الحالية
-# - PUT /settings  — تعديل الإعدادات
+# GET /lessons
+@router.get("/lessons")
+def get_lessons(
+    request: Request,
+    page: int = 1,
+    per_page: int = 10,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin)
+):
+    skip = (page - 1) * per_page
+    lessons = db.query(Lesson).offset(skip).limit(per_page).all()
+    return format_response(True, [LessonResponse.model_validate(l).model_dump() for l in lessons], "قائمة الدروس")
 
-# --- Dependencies ---
-# - app/database.py (get_db)
-# - app/models/* (User, Lesson, SystemLog, LearningSession)
-# - app/schemas/admin_schema.py (AdminDashboard, SystemSettings)
-# - app/schemas/lesson_schema.py (LessonCreate, LessonResponse, LessonUpdate)
+# POST /lessons
+@router.post("/lessons")
+def create_lesson(
+    lesson_data: LessonCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin)
+):
+    lesson = Lesson(**lesson_data.model_dump())
+    db.add(lesson)
+    db.commit()
+    db.refresh(lesson)
+    return format_response(True, LessonResponse.model_validate(lesson).model_dump(), "تم إنشاء الدرس")
 
-# --- API Endpoints ---
-# GET    /api/admin/dashboard          — إحصائيات النظام
-# GET    /api/admin/users              — قائمة المستخدمين
-# POST   /api/admin/users              — إنشاء مستخدم
-# PUT    /api/admin/users/{id}         — تعديل مستخدم
-# DELETE /api/admin/users/{id}         — حذف مستخدم
-# GET    /api/admin/lessons            — قائمة الدروس
-# POST   /api/admin/lessons            — إنشاء درس
-# PUT    /api/admin/lessons/{id}       — تعديل درس
-# DELETE /api/admin/lessons/{id}       — حذف درس
-# GET    /api/admin/logs               — سجلات النظام
-# GET    /api/admin/settings           — جلب الإعدادات
-# PUT    /api/admin/settings           — تعديل الإعدادات
+# PUT /lessons/{id}
+@router.put("/lessons/{lesson_id}")
+def update_lesson(
+    lesson_id: UUID,
+    lesson_data: LessonUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin)
+):
+    lesson = db.query(Lesson).filter(Lesson.id == lesson_id).first()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="الدرس غير موجود")
+    for key, value in lesson_data.model_dump(exclude_none=True).items():
+        setattr(lesson, key, value)
+    db.commit()
+    db.refresh(lesson)
+    return format_response(True, LessonResponse.model_validate(lesson).model_dump(), "تم تعديل الدرس")
 
-# --- Notes ---
-# - جميع الـ endpoints تحتاج مصادقة + role = admin
-# - استخدمي require_admin dependency في كل endpoint
-# - الحذف يكون soft delete (is_active = False) مو حذف فعلي
-# - استخدمي pagination في القوائم الطويلة
-# - استخدمي format_response دائماً: { success: bool, data: any, message: str }
+# DELETE /lessons/{id}
+@router.delete("/lessons/{lesson_id}")
+def delete_lesson(
+    lesson_id: UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin)
+):
+    lesson = db.query(Lesson).filter(Lesson.id == lesson_id).first()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="الدرس غير موجود")
+    db.delete(lesson)
+    db.commit()
+    return format_response(True, None, "تم حذف الدرس")
+
+# GET /logs
+@router.get("/logs")
+def get_logs(
+    request: Request,
+    action: Optional[str] = None,
+    user_id: Optional[UUID] = None,
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
+    page: int = 1,
+    per_page: int = 10,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin)
+):
+    query = db.query(SystemLog)
+    if action:
+        query = query.filter(SystemLog.action == action)
+    if user_id:
+        query = query.filter(SystemLog.user_id == user_id)
+    if date_from:
+        query = query.filter(SystemLog.created_at >= date_from)
+    if date_to:
+        query = query.filter(SystemLog.created_at <= date_to)
+    skip = (page - 1) * per_page
+    logs = query.offset(skip).limit(per_page).all()
+    return format_response(True, [l.__dict__ for l in logs], "سجلات النظام")

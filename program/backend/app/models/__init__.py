@@ -1,3 +1,4 @@
+from app.database import Base
 from app.models.user import User
 from app.models.parent import Parent
 from app.models.student import Student
