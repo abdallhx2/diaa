@@ -1,64 +1,92 @@
-# ============================================================
-# File: services/storage_service.py
-# Purpose: خدمة التخزين — Firebase Storage لرفع وإدارة الملفات الصوتية
-# Owner: ريناد — TTS Engineer
-# Branch: feature/ai-tts
-# Week: Week 2 — ربط التخزين السحابي
-# ============================================================
+from app.config import settings
 
-# --- Required Imports ---
-# import firebase_admin
-# from firebase_admin import storage
-# from app.config import settings
+# Only import Firebase SDK when not in mock mode
+if not settings.USE_MOCKS:
+    import firebase_admin
+    from firebase_admin import storage
 
-# --- Implementation Steps ---
+# In-memory audio cache: cache_key -> URL
+_audio_cache: dict = {}
 
-# Step 1: تهيئة Firebase Admin SDK (لو ما تهيأ قبل)
-# - تحققي إن Firebase مهيأ:
-#   - if not firebase_admin._apps:
-#       cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
-#       firebase_admin.initialize_app(cred, {'storageBucket': settings.FIREBASE_STORAGE_BUCKET})
-# - أو استخدمي الـ app الموجود من auth_service
 
-# Step 2: دالة upload_audio(audio_bytes: bytes, filename: str) -> str
-# - خذي reference للـ bucket:
-#   - bucket = storage.bucket()
-# - أنشئي blob بالمسار:
-#   - blob = bucket.blob(f"audio/{filename}")
-# - ارفعي الملف:
-#   - blob.upload_from_string(audio_bytes, content_type="audio/mpeg")
-# - اجعلي الملف عام (public):
-#   - blob.make_public()
-# - ارجعي الرابط العام:
-#   - return blob.public_url
+def _get_bucket():
+    """Get the Firebase Storage bucket. Ensures the default app has storageBucket configured."""
+    try:
+        return storage.bucket()
+    except Exception:
+        # If bucket name not set on default app, try with explicit name
+        return storage.bucket(settings.FIREBASE_STORAGE_BUCKET)
 
-# Step 3: دالة get_file_url(path: str) -> str | None
-# - خذي reference للـ bucket:
-#   - bucket = storage.bucket()
-# - تحققي لو الملف موجود:
-#   - blob = bucket.blob(path)
-#   - if blob.exists():
-#       return blob.public_url
-#   - else:
-#       return None
-# - تُستخدم للتحقق من الكاش في tts_service
 
-# Step 4: دالة delete_file(path: str) -> bool
-# - خذي reference للـ bucket:
-#   - bucket = storage.bucket()
-# - احذفي الملف:
-#   - blob = bucket.blob(path)
-#   - blob.delete()
-# - ارجعي True لو نجح، False لو فشل
+def upload_to_firebase(file_bytes: bytes, path: str) -> str:
+    """Upload file bytes to Firebase Storage and return the public URL."""
+    from app.config import settings as _settings
+    if _settings.USE_MOCKS:
+        from app.services.mock_services import MockFirebaseStorage
+        return MockFirebaseStorage.upload(file_bytes, path)
 
-# --- Dependencies ---
-# - app/config.py (settings — Firebase credentials + bucket name)
-# - firebase-admin library
-# - google-cloud-storage library
+    try:
+        bucket = _get_bucket()
+        blob = bucket.blob(path)
+        blob.upload_from_string(file_bytes, content_type="audio/mpeg")
+        blob.make_public()
+        return blob.public_url
+    except Exception as e:
+        raise Exception(f"فشل رفع الملف إلى Firebase Storage: {str(e)}")
 
-# --- Notes ---
-# - Firebase Admin SDK لازم يتهيأ مرة واحدة فقط في التطبيق
-# - الملفات الصوتية تُخزن في مجلد audio/ داخل bucket
-# - make_public() يخلي الملف متاح بدون مصادقة (مناسب للصوتيات)
-# - لو تبين أمان أكثر — استخدمي signed URLs بدل public URLs
-# - filename عادةً يكون hash للنص + .mp3 (مثل: abc123.mp3)
+
+def get_download_url(path: str) -> str | None:
+    """Check if a file exists in Firebase Storage and return its public URL, or None."""
+    from app.config import settings as _settings
+    if _settings.USE_MOCKS:
+        from app.services.mock_services import MockFirebaseStorage
+        return MockFirebaseStorage.get_url(path)
+
+    try:
+        bucket = _get_bucket()
+        blob = bucket.blob(path)
+        if blob.exists():
+            blob.make_public()
+            return blob.public_url
+        return None
+    except Exception:
+        return None
+
+
+def delete_file(path: str) -> bool:
+    """Delete a file from Firebase Storage. Returns True on success."""
+    from app.config import settings as _settings
+    if _settings.USE_MOCKS:
+        from app.services.mock_services import MockFirebaseStorage
+        return MockFirebaseStorage.delete(path)
+
+    try:
+        bucket = _get_bucket()
+        blob = bucket.blob(path)
+        blob.delete()
+        return True
+    except Exception:
+        return False
+
+
+def get_cached_audio(cache_key: str) -> str | None:
+    """Return cached audio URL for the given cache key, or None if not cached."""
+    return _audio_cache.get(cache_key)
+
+
+def upload_audio(file_path: str, cache_key: str) -> str:
+    """Upload an audio file to Firebase Storage, store URL in cache, return URL.
+    file_path: local path to the audio file.
+    cache_key: key used for storage path and in-memory cache.
+    """
+    try:
+        storage_path = f"audio/{cache_key}.mp3"
+
+        with open(file_path, "rb") as f:
+            file_bytes = f.read()
+
+        url = upload_to_firebase(file_bytes, storage_path)
+        _audio_cache[cache_key] = url
+        return url
+    except Exception as e:
+        raise Exception(f"فشل رفع الملف الصوتي: {str(e)}")

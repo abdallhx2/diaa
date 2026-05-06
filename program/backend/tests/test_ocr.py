@@ -1,65 +1,105 @@
-# ============================================================
-# File: tests/test_ocr.py
-# Purpose: اختبارات خدمة OCR — التحقق من استخراج النص العربي من الصور
-# Owner: فرح — OCR Engineer
-# Branch: feature/ai-ocr
-# Week: Week 4 — كتابة الاختبارات
-# ============================================================
+import pytest
+from unittest.mock import patch, MagicMock
+from PIL import Image
+import io
 
-# --- Required Imports ---
-# import pytest
-# from PIL import Image
-# import io
-# import time
-# from app.services.ocr_service import extract_text_from_image
 
-# --- Implementation Steps ---
+def _create_test_image(width=400, height=200, color="white"):
+    """Helper to create a simple test image as bytes."""
+    image = Image.new("RGB", (width, height), color)
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
 
-# Step 1: test_arabic_text_extraction — اختبار استخراج النص العربي
-# - أنشئي صورة تحتوي على نص عربي (ممكن تستخدمين صورة تجريبية)
-# - أو استخدمي Pillow لإنشاء صورة بنص:
-#   - from PIL import ImageDraw, ImageFont
-#   - image = Image.new('RGB', (400, 200), 'white')
-#   - draw = ImageDraw.Draw(image)
-#   - draw.text((10, 10), "بسم الله الرحمن الرحيم", fill='black')
-# - حوليها لـ bytes
-# - استدعي extract_text_from_image(image_bytes)
-# - تحققي إن النتيجة تحتوي على نص عربي (مو فاضية)
-# - assert len(result) > 0
 
-# Step 2: test_empty_image — اختبار صورة فاضية
-# - أنشئي صورة بيضاء بدون نص
-# - استدعي extract_text_from_image(image_bytes)
-# - تحققي إن النتيجة فاضية أو تحتوي على نص قليل جداً
-# - assert result == "" or len(result) < 5
+class TestExtractText:
+    """Tests for OCR text extraction."""
 
-# Step 3: test_invalid_image — اختبار صورة غير صالحة
-# - أرسلي bytes عشوائية (مو صورة حقيقية)
-# - تحققي إن الدالة ترمي Exception أو ترجع خطأ مناسب
-# - with pytest.raises(Exception):
-#       extract_text_from_image(b"invalid image data")
+    @patch("app.services.ocr_service.get_reader")
+    def test_arabic_text_extraction(self, mock_get_reader):
+        from app.services.ocr_service import extract_text_from_image
 
-# Step 4: test_large_image — اختبار صورة كبيرة
-# - أنشئي صورة كبيرة (مثل 5000x5000 بكسل)
-# - تحققي إن الدالة تتعامل معها بدون crash
-# - تحققي إن resize_if_needed تصغرها
+        mock_reader = MagicMock()
+        mock_reader.readtext.return_value = [
+            ([[0, 0], [100, 0], [100, 30], [0, 30]], "بسم الله", 0.95),
+            ([[0, 40], [100, 40], [100, 70], [0, 70]], "الرحمن الرحيم", 0.90),
+        ]
+        mock_get_reader.return_value = mock_reader
 
-# Step 5: test_processing_time — اختبار وقت المعالجة
-# - أنشئي صورة عادية بنص
-# - قيسي الوقت:
-#   - start = time.time()
-#   - result = extract_text_from_image(image_bytes)
-#   - elapsed = time.time() - start
-# - تحققي إن الوقت أقل من 5 ثواني:
-#   - assert elapsed < 5.0
+        image_bytes = _create_test_image()
+        result = extract_text_from_image(image_bytes)
 
-# --- Dependencies ---
-# - app/services/ocr_service.py
-# - pytest library
-# - Pillow library
+        assert len(result) > 0
+        assert "بسم الله" in result
+        assert "الرحمن الرحيم" in result
 
-# --- Notes ---
-# - شغلي الاختبارات بـ: pytest tests/test_ocr.py -v
-# - الاختبارات تحتاج EasyOCR model محمّل (أول مرة يحمل يحتاج وقت)
-# - test_arabic_text_extraction يعتمد على جودة الصورة وحجم الخط
-# - ممكن بعض الاختبارات تكون بطيئة عشان EasyOCR — استخدمي pytest markers لو تبين
+    @patch("app.services.ocr_service.get_reader")
+    def test_empty_image(self, mock_get_reader):
+        from app.services.ocr_service import extract_text_from_image
+
+        mock_reader = MagicMock()
+        mock_reader.readtext.return_value = []
+        mock_get_reader.return_value = mock_reader
+
+        image_bytes = _create_test_image()
+        result = extract_text_from_image(image_bytes)
+        assert result == ""
+
+    def test_invalid_image(self):
+        from app.services.ocr_service import extract_text_from_image
+
+        with pytest.raises(Exception):
+            extract_text_from_image(b"this is not an image")
+
+    @patch("app.services.ocr_service.get_reader")
+    def test_large_image_resized(self, mock_get_reader):
+        from app.services.ocr_service import extract_text_from_image
+
+        mock_reader = MagicMock()
+        mock_reader.readtext.return_value = [
+            ([[0, 0], [100, 0], [100, 30], [0, 30]], "نص", 0.9),
+        ]
+        mock_get_reader.return_value = mock_reader
+
+        image_bytes = _create_test_image(width=5000, height=5000)
+        result = extract_text_from_image(image_bytes)
+        assert isinstance(result, str)
+
+
+class TestImageProcessing:
+    """Tests for image preprocessing utilities."""
+
+    def test_enhance_contrast(self):
+        from app.utils.image_processing import enhance_contrast
+
+        image = Image.new("L", (100, 100), 128)
+        result = enhance_contrast(image)
+        assert result.size == (100, 100)
+
+    def test_remove_noise(self):
+        from app.utils.image_processing import remove_noise
+
+        image = Image.new("L", (100, 100), 128)
+        result = remove_noise(image)
+        assert result.size == (100, 100)
+
+    def test_convert_to_grayscale(self):
+        from app.utils.image_processing import convert_to_grayscale
+
+        image = Image.new("RGB", (100, 100), "red")
+        result = convert_to_grayscale(image)
+        assert result.mode == "L"
+
+    def test_resize_if_needed_large(self):
+        from app.utils.image_processing import resize_if_needed
+
+        image = Image.new("RGB", (4000, 3000))
+        result = resize_if_needed(image, max_size=2000)
+        assert max(result.size) <= 2000
+
+    def test_resize_if_needed_small(self):
+        from app.utils.image_processing import resize_if_needed
+
+        image = Image.new("RGB", (500, 300))
+        result = resize_if_needed(image, max_size=2000)
+        assert result.size == (500, 300)

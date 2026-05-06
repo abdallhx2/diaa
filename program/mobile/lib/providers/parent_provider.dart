@@ -1,66 +1,82 @@
-// ============================================================
-// File: parent_provider.dart
-// Purpose: إدارة حالة ولي الأمر — الأطفال، التقارير، الإحصائيات
-// Owner: ديمة — Flutter Lead
-// Branch: feature/flutter-student
-// Week: 2-3 — شاشات ولي الأمر والتقارير
-// ============================================================
+import 'package:flutter/material.dart';
+import 'package:edu_smart_assistant/models/student_model.dart';
+import 'package:edu_smart_assistant/models/report_model.dart';
+import 'package:edu_smart_assistant/services/parent_service.dart';
 
-// --- Required Imports ---
-// import 'package:flutter/material.dart';
-// import 'package:edu_smart_assistant/models/student_model.dart';
-// import 'package:edu_smart_assistant/models/report_model.dart';
-// import 'package:edu_smart_assistant/services/parent_service.dart';
+class ParentProvider extends ChangeNotifier {
+  List<StudentModel> _children = [];
+  StudentModel? _selectedChild;
+  ReportModel? _weeklyReport;
+  ReportModel? _monthlyReport;
+  bool _isLoading = false;
+  String? _errorMessage;
+  final ParentService _parentService = ParentService();
 
-// --- Implementation Steps ---
-// Step 1: إنشاء class ParentProvider extends ChangeNotifier
-//         - class ParentProvider extends ChangeNotifier { ... }
+  List<StudentModel> get children => _children;
+  StudentModel? get selectedChild => _selectedChild;
+  ReportModel? get weeklyReport => _weeklyReport;
+  ReportModel? get monthlyReport => _monthlyReport;
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+  bool get hasChildren => _children.isNotEmpty;
 
-// Step 2: تعريف الحقول (Fields)
-//         - List<StudentModel> _children = [];       // قائمة الأطفال
-//         - StudentModel? _selectedChild;             // الطفل المختار حالياً
-//         - ReportModel? _weeklyReport;               // التقرير الأسبوعي
-//         - ReportModel? _monthlyReport;              // التقرير الشهري
-//         - bool _isLoading = false;
-//         - String? _errorMessage;
-//         - final ParentService _parentService = ParentService();
+  Future<void> fetchChildren() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
 
-// Step 3: إنشاء Getters
-//         - List<StudentModel> get children => _children;
-//         - StudentModel? get selectedChild => _selectedChild;
-//         - ReportModel? get weeklyReport => _weeklyReport;
-//         - ReportModel? get monthlyReport => _monthlyReport;
-//         - bool get isLoading => _isLoading;
-//         - bool get hasChildren => _children.isNotEmpty;
+    try {
+      _children = await _parentService.getChildren();
+      if (_children.isNotEmpty) {
+        _selectedChild = _children.first;
+        await fetchReport(_selectedChild!.id, 'weekly');
+      }
+    } catch (e) {
+      _errorMessage = null;
+      _children = [];
+    }
 
-// Step 4: إنشاء method fetchChildren()
-//         - _isLoading = true; notifyListeners();
-//         - استدعاء _parentService.getChildren()
-//         - _children = القائمة المُرجعة
-//         - إذا _children.isNotEmpty: _selectedChild = _children.first;
-//         - _isLoading = false; notifyListeners();
+    _isLoading = false;
+    notifyListeners();
+  }
 
-// Step 5: إنشاء method selectChild(StudentModel child)
-//         - _selectedChild = child;
-//         - notifyListeners();
-//         - يمكن استدعاء fetchReport تلقائياً بعد التحديد
+  void selectChild(StudentModel child) {
+    _selectedChild = child;
+    notifyListeners();
+    fetchReport(child.id, 'weekly');
+  }
 
-// Step 6: إنشاء method fetchReport(String childId, String type)
-//         - type يكون 'weekly' أو 'monthly'
-//         - استدعاء _parentService.getWeeklyReport(childId) أو getMonthlyReport(childId)
-//         - تعيين _weeklyReport أو _monthlyReport
-//         - notifyListeners();
+  Future<void> fetchReport(String childId, String type) async {
+    try {
+      if (type == 'weekly') {
+        _weeklyReport = await _parentService.getWeeklyReport(childId);
+      } else {
+        _monthlyReport = await _parentService.getMonthlyReport(childId);
+      }
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = 'فشل في تحميل التقرير';
+      notifyListeners();
+    }
+  }
 
-// Step 7: إنشاء method addChild(Map<String, dynamic> data)
-//         - _isLoading = true; notifyListeners();
-//         - استدعاء _parentService.addChild(data)
-//         - عند النجاح: إضافة الطفل الجديد لـ _children
-//         - عند الفشل: تعيين _errorMessage
-//         - _isLoading = false; notifyListeners();
+  Future<bool> addChild(Map<String, dynamic> data) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
 
-// --- Notes ---
-// - يُستخدم في: parent_dashboard_screen, add_child_screen, reports_screen
-// - fetchChildren() يُستدعى عند فتح لوحة ولي الأمر
-// - إذا لم يكن هناك أطفال: عرض زر "أضف طفلك الأول"
-// - selectedChild يتغير عبر dropdown في لوحة ولي الأمر
-// - التقارير تُحدث عند تغيير الطفل المحدد أو نوع التقرير
+    try {
+      final child = await _parentService.addChild(data);
+      _children.add(child);
+      _selectedChild ??= child;
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+}

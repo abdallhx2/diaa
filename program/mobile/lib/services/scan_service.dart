@@ -4,60 +4,78 @@ import 'package:edu_smart_assistant/services/api_service.dart';
 import 'package:edu_smart_assistant/models/lesson_model.dart';
 
 class ScanService {
-// Step 1: الاتصال بـ ApiService
-final ApiService _apiService = ApiService();
+  final ApiService _apiService = ApiService();
 
-// Step 2: مسح صفحة بالكاميرا
-Future<LessonModel> scanPage(File imageFile) async {
-try {
-FormData formData = FormData.fromMap({
-'image': await MultipartFile.fromFile(
-imageFile.path,
-filename: 'scan_${DateTime.now().millisecondsSinceEpoch}.jpg',
-),
-});
+  /// مسح صفحة بالكاميرا — إرسال صورة لاستخراج النص بـ OCR
+  /// Backend يعيد: { extracted_text: string }
+  Future<String> sendImageForOcr(File imageFile) async {
+    try {
+      final formData = FormData.fromMap({
+        'image': await MultipartFile.fromFile(
+          imageFile.path,
+          filename: 'scan_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        ),
+      });
 
-Response response =
-await _apiService.uploadFile('/scan/ocr', formData: formData);
+      final response = await _apiService.uploadFile(
+        '/scan/ocr',
+        formData: formData,
+      );
 
-return LessonModel.fromJson(response.data);
+      final data = response.data;
+      if (data['success'] == true) {
+        return data['data']['extracted_text'] ?? '';
+      }
+      throw Exception(data['message'] ?? 'فشل في استخراج النص من الصورة');
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('فشل في استخراج النص من الصورة');
+    }
+  }
 
-} catch (e) {
-throw Exception('حدث خطأ في مسح الصفحة');
-}
-}
+  /// مسح كود QR — إرسال بيانات QR لجلب الدرس
+  /// Backend يعيد: LessonModel (id, title, subject, grade_level, original_text, audio_url)
+  Future<LessonModel> sendQrData(String qrData) async {
+    try {
+      final response = await _apiService.post('/scan/qr', data: {
+        'qr_code': qrData,
+      });
 
-// Step 3: مسح كود QR
-Future<LessonModel> scanQR(String lessonId) async {
-try {
-Response response = await _apiService.post('/scan/qr', data: {
-'lesson_id': lessonId,
-});
+      final data = response.data;
+      if (data['success'] == true) {
+        return LessonModel.fromJson(data['data']);
+      }
+      throw Exception(data['message'] ?? 'فشل في جلب بيانات الدرس');
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('فشل في جلب بيانات الدرس من كود QR');
+    }
+  }
 
-return LessonModel.fromJson(response.data);
+  /// رفع ملف/صورة — إرسال صورة من المعرض لاستخراج النص
+  /// Backend يعيد: { extracted_text: string }
+  Future<String> uploadFile(File imageFile) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(
+          imageFile.path,
+          filename: 'upload_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        ),
+      });
 
-} catch (e) {
-throw Exception('حدث خطأ في مسح الكود');
-}
-}
+      final response = await _apiService.uploadFile(
+        '/scan/upload',
+        formData: formData,
+      );
 
-// Step 4: رفع صورة من المعرض
-Future<LessonModel> uploadFile(File imageFile) async {
-try {
-FormData formData = FormData.fromMap({
-'image': await MultipartFile.fromFile(
-imageFile.path,
-filename: 'upload_${DateTime.now().millisecondsSinceEpoch}.jpg',
-),
-});
-
-Response response =
-await _apiService.uploadFile('/scan/upload', formData: formData);
-
-return LessonModel.fromJson(response.data);
-
-} catch (e) {
-throw Exception('حدث خطأ في رفع الصورة');
-}
-}
+      final data = response.data;
+      if (data['success'] == true) {
+        return data['data']['extracted_text'] ?? '';
+      }
+      throw Exception(data['message'] ?? 'فشل في رفع الملف');
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('فشل في رفع الملف واستخراج النص');
+    }
+  }
 }

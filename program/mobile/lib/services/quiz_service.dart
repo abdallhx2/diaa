@@ -1,75 +1,81 @@
 import 'package:edu_smart_assistant/services/api_service.dart';
 import 'package:edu_smart_assistant/models/quiz_model.dart';
 import 'package:edu_smart_assistant/models/quiz_result_model.dart';
-import 'package:dio/dio.dart';
 
 class QuizService {
-// Step 1: الاتصال بـ ApiService
-final ApiService _apiService = ApiService();
+  final ApiService _apiService = ApiService();
 
-// Step 2: جلب اختبارات درس معين
-Future<List<QuizModel>> getQuizzes(String lessonId) async {
-try {
-Response response = await _apiService.get('/quizzes/$lessonId');
+  /// جلب اختبارات درس معين
+  Future<List<QuizModel>> getQuizzesByLesson(String lessonId) async {
+    try {
+      final response = await _apiService.get('/quizzes/$lessonId');
 
-List<QuizModel> quizzes = (response.data as List)
-.map((e) => QuizModel.fromJson(e))
-.toList();
+      final data = response.data;
+      if (data['success'] == true) {
+        final list = data['data'] as List<dynamic>;
+        return list
+            .map((e) => QuizModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      throw Exception('فشل في جلب الاختبارات');
+    }
+  }
 
-return quizzes;
+  /// جلب اختبارات بنوع محدد
+  Future<List<QuizModel>> getQuizzesByType(String type) async {
+    try {
+      final response = await _apiService.get('/quizzes/types/$type');
 
-} catch (e) {
-throw Exception('حدث خطأ في جلب الاختبارات');
-}
-}
+      final data = response.data;
+      if (data['success'] == true) {
+        final list = data['data'] as List<dynamic>;
+        return list
+            .map((e) => QuizModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      throw Exception('فشل في جلب الاختبارات');
+    }
+  }
 
-// Step 3: جلب اختبارات بنوع محدد
-Future<List<QuizModel>> getByType(String type) async {
-try {
-Response response = await _apiService.get('/quizzes/types/$type');
+  /// إرسال إجابة سؤال واحد
+  Future<QuizResultModel> submitAnswer(
+      String quizId, String selectedAnswer) async {
+    try {
+      final response = await _apiService.post('/quizzes/submit', data: {
+        'quiz_id': quizId,
+        'selected_answer': selectedAnswer,
+      });
 
-List<QuizModel> quizzes = (response.data as List)
-.map((e) => QuizModel.fromJson(e))
-.toList();
+      final data = response.data;
+      if (data['success'] == true) {
+        return QuizResultModel.fromJson(data['data']);
+      }
+      throw Exception(data['message'] ?? 'فشل في إرسال الإجابة');
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('فشل في إرسال الإجابة');
+    }
+  }
 
-return quizzes;
+  /// جلب نتائج اختبارات طالب
+  Future<List<QuizResultModel>> getResults(String studentId) async {
+    try {
+      final response = await _apiService.get('/quizzes/results/$studentId');
 
-} catch (e) {
-throw Exception('حدث خطأ في جلب الاختبارات');
-}
-}
-
-// Step 4: إرسال إجابات الطالب
-Future<QuizResultModel> submitQuiz(
-String quizId, String studentId, Map<String, String> answers) async {
-try {
-Response response = await _apiService.post('/quizzes/submit', data: {
-'quiz_id': quizId,
-'student_id': studentId,
-'answers': answers,
-});
-
-return QuizResultModel.fromJson(response.data);
-
-} catch (e) {
-throw Exception('حدث خطأ في إرسال الإجابات');
-}
-}
-
-// Step 5: جلب نتائج طالب معين
-Future<List<QuizResultModel>> getResults(String studentId) async {
-try {
-Response response =
-await _apiService.get('/quizzes/results/$studentId');
-
-List<QuizResultModel> results = (response.data as List)
-.map((e) => QuizResultModel.fromJson(e))
-.toList();
-
-return results;
-
-} catch (e) {
-throw Exception('حدث خطأ في جلب النتائج');
-}
-}
+      final data = response.data;
+      if (data['success'] == true) {
+        final list = data['data'] as List<dynamic>;
+        return list
+            .map((e) => QuizResultModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      throw Exception('فشل في جلب النتائج');
+    }
+  }
 }

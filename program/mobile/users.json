@@ -1,0 +1,23 @@
+{"users": [
+{
+  "localId": "KBA71Xo0bRTTa3H7DRCSE5NAApt2",
+  "email": "parent@diyaa.test",
+  "emailVerified": false,
+  "passwordHash": "hU9eRMPVZoLyBCff8sQJcoxRkZO/BBmDvqrMfifGDmyTjEH/0Ev1VtY1xMTiwnOSc6IwCCwrngXqxkZWdJLMeQ==",
+  "salt": "aMFrrnHxU/evTw==",
+  "displayName": "???? ??? ?????",
+  "lastSignedInAt": "1777923693578",
+  "createdAt": "1777923693578",
+  "providerUserInfo": []
+},
+{
+  "localId": "U4vvHlF4zRa6su2QzC9uXgXHLRz2",
+  "email": "student@diyaa.test",
+  "emailVerified": false,
+  "passwordHash": "HKw2ck7oxGJ+fZL7hio7r72GDA6W31Urc14umJGl8WqknjBzNtOa+MC1mDV2ZxhVKGK+01MbMPLJ+NrV4OOanA==",
+  "salt": "wqO+TzODxtZ9Vw==",
+  "displayName": "???? ??????",
+  "lastSignedInAt": "1777923692390",
+  "createdAt": "1777923692390",
+  "providerUserInfo": []
+}]}

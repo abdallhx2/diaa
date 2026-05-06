@@ -1,51 +1,64 @@
-// ============================================================
-// File: Header.tsx
-// Purpose: الشريط العلوي - يعرض عنوان الصفحة ومعلومات المسؤول
-// Owner: جود — Admin Lead
-// Branch: feature/admin-core
-// Week: 1 — بناء الهيكل الأساسي والمصادقة
-// ============================================================
+'use client';
 
-// --- Required Imports ---
-// 'use client';
-// import { usePathname } from 'next/navigation';
-// import { Bell, LogOut, Menu } from 'lucide-react';
-// import { signOut } from '@/services/auth';
+import { useRouter } from 'next/navigation';
 
-// --- Implementation Steps ---
-// Step 1: تعريف Props
-//   - interface HeaderProps {
-//       onMenuToggle?: () => void;  // لزر hamburger في الموبايل
-//     }
+interface HeaderProps {
+  title?: string;
+}
 
-// Step 2: تحديد عنوان الصفحة ديناميكياً من pathname
-//   - const pathname = usePathname();
-//   - const pageTitles: Record<string, string> = {
-//       '/dashboard': 'لوحة المعلومات',
-//       '/users': 'إدارة المستخدمين',
-//       '/lessons': 'إدارة الدروس',
-//       '/quizzes': 'إدارة الاختبارات',
-//       '/logs': 'سجلات النظام',
-//       '/settings': 'الإعدادات',
-//     };
-//   - استخرج العنوان المناسب بناءً على pathname
+export default function Header({ title }: HeaderProps) {
+  const router = useRouter();
 
-// Step 3: بناء هيكل Header
-//   - <header className="fixed top-0 right-[250px] left-0 h-16 bg-white shadow-sm z-30 flex items-center justify-between px-6">
-//   - ثابت في الأعلى، يبدأ بعد Sidebar (right: 250px في RTL)
+  const handleLogout = () => {
+    router.push('/');
+  };
 
-// Step 4: الجانب الأيمن (RTL) — عنوان الصفحة
-//   - <h1 className="text-xl font-bold text-gray-800">{pageTitle}</h1>
-//   - زر hamburger للموبايل: <Menu className="lg:hidden" onClick={onMenuToggle} />
+  return (
+    <header
+      className="sticky top-0 z-[100] flex items-center"
+      style={{
+        height: 'var(--topbar-h)',
+        background: '#FFFFFF',
+        borderBottom: '1px solid var(--border)',
+        paddingInline: '24px',
+        marginRight: 'var(--sidebar-w)',
+      }}
+    >
+      {/* Left side: logo + page title */}
+      <div className="flex items-center gap-3">
+        <span className="text-purple font-bold text-base">ضياء</span>
+        {title && (
+          <>
+            <span className="text-diaa-border">|</span>
+            <span className="font-bold text-diaa-text text-sm">{title}</span>
+          </>
+        )}
+      </div>
 
-// Step 5: الجانب الأيسر (RTL) — معلومات المسؤول
-//   - اسم المسؤول: <span className="text-gray-600">مرحباً، المسؤول</span>
-//   - أيقونة الإشعارات: <Bell className="text-gray-400 cursor-pointer hover:text-gray-600" />
-//   - زر تسجيل الخروج: <LogOut onClick={handleLogout} />
+      {/* Right side (margin-right auto pushes to left in RTL) */}
+      <div className="mr-auto flex items-center gap-4">
+        {/* Logout button */}
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-diaa-sm text-red hover:bg-red/10 transition-colors text-sm font-medium"
+        >
+          خروج
+        </button>
 
-// --- Notes ---
-// - Header ثابت (fixed) مع z-30 (أقل من Sidebar z-40)
-// - في الموبايل: right يصبح 0 (Sidebar مخفي) ويظهر زر Menu
-// - يمكن جلب اسم المسؤول الحقيقي من AuthContext بدل النص الثابت
-// - الإشعارات حالياً شكلية — يمكن ربطها بـ API لاحقاً
-// - استخدم transition-colors للتأثيرات عند hover
+        {/* Admin avatar pill */}
+        <div
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full"
+          style={{ background: 'var(--purple-dim)' }}
+        >
+          <div
+            className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold"
+            style={{ background: 'var(--purple)' }}
+          >
+            م
+          </div>
+          <span className="text-sm font-medium text-diaa-text">المدير</span>
+        </div>
+      </div>
+    </header>
+  );
+}

@@ -1,82 +1,75 @@
-// ============================================================
-// File: chat_bubble_widget.dart
-// Purpose: فقاعة محادثة — عرض رسائل الطالب ورد المساعد الذكي
-// Owner: رهف — UI Developer
-// Branch: feature/flutter-parent
-// Week: 2 — ويدجت المحادثة
-// ============================================================
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart' hide TextDirection;
+import 'package:edu_smart_assistant/config/theme.dart';
 
-// --- Required Imports ---
-// import 'package:flutter/material.dart';
-// import 'package:intl/intl.dart';
-// import 'package:edu_smart_assistant/config/theme.dart';
+class ChatBubbleWidget extends StatelessWidget {
+  final String message;
+  final bool isUser;
+  final DateTime timestamp;
 
-// --- Implementation Steps ---
-// Step 1: إنشاء StatelessWidget باسم ChatBubbleWidget
-//         - class ChatBubbleWidget extends StatelessWidget { ... }
+  const ChatBubbleWidget({
+    super.key,
+    required this.message,
+    required this.isUser,
+    required this.timestamp,
+  });
 
-// Step 2: تعريف الخصائص (Props)
-//         - final String message;          // نص الرسالة
-//         - final bool isUser;             // true = رسالة المستخدم، false = رسالة البوت
-//         - final DateTime timestamp;      // وقت الرسالة
-
-// Step 3: إنشاء Constructor
-//         - const ChatBubbleWidget({
-//             required this.message,
-//             required this.isUser,
-//             required this.timestamp,
-//           });
-
-// Step 4: بناء فقاعة المحادثة
-//         - return Align(
-//             // RTL: رسالة المستخدم على اليسار، رسالة البوت على اليمين
-//             alignment: isUser ? Alignment.centerLeft : Alignment.centerRight,
-//             child: Container(
-//               constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-//               margin: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-//               padding: EdgeInsets.all(12),
-//               decoration: BoxDecoration(
-//                 color: isUser
-//                   ? AppTheme.primaryBlue.withOpacity(0.15)    // فقاعة المستخدم: أزرق فاتح
-//                   : AppTheme.primaryGreen.withOpacity(0.15),   // فقاعة البوت: أخضر فاتح
-//                 borderRadius: BorderRadius.only(
-//                   topLeft: Radius.circular(16),
-//                   topRight: Radius.circular(16),
-//                   bottomLeft: isUser ? Radius.zero : Radius.circular(16),
-//                   bottomRight: isUser ? Radius.circular(16) : Radius.zero,
-//                 ),
-//               ),
-//               child: Column(
-//                 crossAxisAlignment: CrossAxisAlignment.start,
-//                 children: [
-//                   // اسم المرسل
-//                   Text(
-//                     isUser ? 'أنت' : 'المساعد الذكي',
-//                     style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
-//                   ),
-//                   SizedBox(height: 4),
-//                   // نص الرسالة
-//                   Text(
-//                     message,
-//                     style: TextStyle(fontSize: 16, height: 1.4),
-//                     textDirection: TextDirection.rtl,
-//                   ),
-//                   SizedBox(height: 4),
-//                   // الوقت
-//                   Text(
-//                     DateFormat('HH:mm').format(timestamp),
-//                     style: TextStyle(fontSize: 10, color: Colors.grey),
-//                   ),
-//                 ],
-//               ),
-//             ),
-//           );
-
-// --- Notes ---
-// - في RTL: رسالة المستخدم تظهر على اليسار، رسالة البوت على اليمين
-// - ألوان مختلفة: أزرق فاتح للمستخدم، أخضر فاتح للبوت
-// - أقصى عرض 75% من الشاشة
-// - حدود مستديرة مع زاوية حادة عند المرسل
-// - يعرض: اسم المرسل + النص + الوقت
-// - يُستخدم في ai_chat_screen.dart
-// - يحتاج حزمة intl لتنسيق الوقت
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
+        ),
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isUser
+              ? AppTheme.primary200.withValues(alpha: 0.12)
+              : AppTheme.accent100.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft:
+                isUser ? const Radius.circular(16) : Radius.zero,
+            bottomRight:
+                isUser ? Radius.zero : const Radius.circular(16),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isUser ? 'أنت' : 'المساعد الذكي',
+              style: GoogleFonts.tajawal(
+                fontSize: 12,
+                color: AppTheme.text200,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              message,
+              style: GoogleFonts.tajawal(
+                fontSize: 16,
+                height: 1.4,
+                color: AppTheme.text100,
+              ),
+              textDirection: TextDirection.rtl,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              DateFormat('HH:mm').format(timestamp),
+              style: GoogleFonts.tajawal(
+                fontSize: 10,
+                color: AppTheme.text200,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

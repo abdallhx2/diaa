@@ -1,57 +1,93 @@
-# ============================================================
-# File: tests/test_auth.py
-# Purpose: اختبارات خدمة المصادقة — التحقق من التوكن وإنشاء المستخدمين
-# Owner: مشاعل — Backend Lead
-# Branch: feature/backend-auth
-# Week: Week 4 — كتابة الاختبارات
-# ============================================================
+import pytest
+from unittest.mock import patch, MagicMock
+from uuid import uuid4
 
-# --- Required Imports ---
-# import pytest
-# from unittest.mock import patch, MagicMock
-# from app.services.auth_service import verify_firebase_token, get_or_create_user, register_parent, add_child_to_parent
 
-# --- Implementation Steps ---
+class TestVerifyFirebaseToken:
+    """Tests for Firebase token verification."""
 
-# Step 1: test_verify_valid_token — اختبار توكن صالح
-# - استخدمي mock لـ Firebase Admin SDK
-# - @patch('app.services.auth_service.auth.verify_id_token')
-# - اجعلي الـ mock يرجع decoded token:
-#   - mock_verify.return_value = {"uid": "test_uid", "email": "test@test.com", "name": "Test User"}
-# - استدعي verify_firebase_token("valid_token")
-# - تحققي إن النتيجة تحتوي على uid
-# - assert result["uid"] == "test_uid"
+    @patch("app.services.auth_service.auth")
+    def test_verify_valid_token(self, mock_auth):
+        from app.services.auth_service import verify_firebase_token
 
-# Step 2: test_verify_invalid_token — اختبار توكن غير صالح
-# - استخدمي mock يرمي Exception
-# - mock_verify.side_effect = Exception("Token expired")
-# - استدعي verify_firebase_token("invalid_token")
-# - تحققي إن الدالة ترمي Exception
-# - with pytest.raises(Exception)
+        mock_auth.verify_id_token.return_value = {
+            "uid": "test_uid_123",
+            "email": "test@test.com",
+            "name": "Test User",
+        }
 
-# Step 3: test_get_or_create_new_user — اختبار إنشاء مستخدم جديد
-# - استخدمي mock لـ DB session
-# - اجعلي query يرجع None (المستخدم مو موجود)
-# - استدعي get_or_create_user("new_uid", "student", "طالب تجريبي", "test@test.com")
-# - تحققي إن db.add انستدعت (مستخدم جديد تم إنشاؤه)
+        result = verify_firebase_token("valid_token")
+        assert result["uid"] == "test_uid_123"
+        assert result["email"] == "test@test.com"
+        mock_auth.verify_id_token.assert_called_once_with("valid_token")
 
-# Step 4: test_get_or_create_existing_user — اختبار جلب مستخدم موجود
-# - استخدمي mock لـ DB session
-# - اجعلي query يرجع مستخدم موجود
-# - استدعي get_or_create_user("existing_uid", "student", "طالب", "test@test.com")
-# - تحققي إن db.add ما انستدعت (ما تم إنشاء مستخدم جديد)
+    @patch("app.services.auth_service.auth")
+    def test_verify_invalid_token(self, mock_auth):
+        from app.services.auth_service import verify_firebase_token
 
-# Step 5: test_register_parent — اختبار تسجيل ولي أمر
-# - استخدمي mock لـ Firebase auth.create_user
-# - استدعي register_parent(data)
-# - تحققي إن الحساب تم إنشاؤه في Firebase + DB
+        mock_auth.verify_id_token.side_effect = Exception("Token expired")
 
-# --- Dependencies ---
-# - app/services/auth_service.py
-# - pytest library
-# - unittest.mock (للـ mocking)
+        with pytest.raises(Exception, match="فشل التحقق من التوكن"):
+            verify_firebase_token("invalid_token")
 
-# --- Notes ---
-# - شغلي الاختبارات بـ: pytest tests/test_auth.py -v
-# - استخدمي mocking لـ Firebase Admin SDK و DB
-# - لا تستخدمي credentials حقيقية في الاختبارات
+
+class TestGetOrCreateUser:
+    """Tests for get_or_create_user."""
+
+    @patch("app.services.auth_service.Admin")
+    @patch("app.services.auth_service.Student")
+    @patch("app.services.auth_service.Parent")
+    @patch("app.services.auth_service.User")
+    def test_returns_existing_user(self, MockUser, MockParent, MockStudent, MockAdmin):
+        from app.services.auth_service import get_or_create_user
+
+        mock_db = MagicMock()
+        existing_user = MagicMock()
+        existing_user.id = uuid4()
+        existing_user.firebase_uid = "existing_uid"
+        mock_db.query.return_value.filter.return_value.first.return_value = existing_user
+
+        result = get_or_create_user(mock_db, "existing_uid", "student", "طالب", "test@test.com")
+        assert result == existing_user
+        mock_db.add.assert_not_called()
+
+    @patch("app.services.auth_service.Admin")
+    @patch("app.services.auth_service.Student")
+    @patch("app.services.auth_service.Parent")
+    @patch("app.services.auth_service.User")
+    def test_creates_new_student(self, MockUser, MockParent, MockStudent, MockAdmin):
+        from app.services.auth_service import get_or_create_user
+
+        mock_db = MagicMock()
+        mock_db.query.return_value.filter.return_value.first.return_value = None
+        mock_user_instance = MagicMock()
+        mock_user_instance.id = uuid4()
+        MockUser.return_value = mock_user_instance
+
+        result = get_or_create_user(mock_db, "new_uid", "student", "طالب جديد", "new@test.com")
+        assert mock_db.add.called
+        assert mock_db.commit.called
+
+
+class TestRegisterParent:
+    """Tests for register_parent."""
+
+    @patch("app.services.auth_service.Parent")
+    @patch("app.services.auth_service.User")
+    def test_register_parent_success(self, MockUser, MockParent):
+        from app.services.auth_service import register_parent
+
+        mock_db = MagicMock()
+        mock_user_instance = MagicMock()
+        mock_user_instance.id = uuid4()
+        MockUser.return_value = mock_user_instance
+
+        result = register_parent(
+            mock_db,
+            name="ولي أمر",
+            email="parent@test.com",
+            phone="0512345678",
+            firebase_uid="parent_uid",
+        )
+        assert mock_db.add.called
+        assert mock_db.commit.called

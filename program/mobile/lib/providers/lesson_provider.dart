@@ -1,53 +1,119 @@
-// ============================================================
-// File: lesson_provider.dart
-// Purpose: إدارة حالة الدرس الحالي — النص المستخرج والصوت
-// Owner: ديمة — Flutter Lead
-// Branch: feature/flutter-student
-// Week: 2 — شاشات الطالب الأساسية
-// ============================================================
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:edu_smart_assistant/models/lesson_model.dart';
+import 'package:edu_smart_assistant/services/scan_service.dart';
+import 'package:edu_smart_assistant/services/tts_service.dart';
 
-// --- Required Imports ---
-// import 'package:flutter/material.dart';
-// import 'package:edu_smart_assistant/models/lesson_model.dart';
+class LessonProvider extends ChangeNotifier {
+  LessonModel? _currentLesson;
+  String? _extractedText;
+  String? _audioUrl;
+  bool _isProcessing = false;
+  String? _errorMessage;
+  final ScanService _scanService = ScanService();
+  final TtsService _ttsService = TtsService();
 
-// --- Implementation Steps ---
-// Step 1: إنشاء class LessonProvider extends ChangeNotifier
-//         - class LessonProvider extends ChangeNotifier { ... }
+  // Getters
+  LessonModel? get currentLesson => _currentLesson;
+  String? get extractedText => _extractedText;
+  String? get audioUrl => _audioUrl;
+  bool get isProcessing => _isProcessing;
+  bool get isLoading => _isProcessing;
+  String? get errorMessage => _errorMessage;
 
-// Step 2: تعريف الحقول (Fields)
-//         - LessonModel? _currentLesson;      // الدرس الحالي
-//         - String? _extractedText;            // النص المستخرج من OCR
-//         - String? _audioUrl;                 // رابط الصوت المولد
-//         - bool _isLoading = false;
+  /// معالجة صورة ملتقطة بالكاميرا — OCR
+  /// Backend يعيد النص المستخرج فقط (ليس درس كامل)
+  Future<void> processImage(File imageFile) async {
+    _isProcessing = true;
+    _errorMessage = null;
+    notifyListeners();
 
-// Step 3: إنشاء Getters
-//         - LessonModel? get currentLesson => _currentLesson;
-//         - String? get extractedText => _extractedText;
-//         - String? get audioUrl => _audioUrl;
-//         - bool get isLoading => _isLoading;
+    try {
+      final extractedText = await _scanService.sendImageForOcr(imageFile);
+      _extractedText = extractedText;
+      _currentLesson = null;
+      _audioUrl = null;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+    }
 
-// Step 4: إنشاء method setLesson(LessonModel lesson)
-//         - _currentLesson = lesson;
-//         - _extractedText = lesson.originalText;
-//         - _audioUrl = lesson.audioUrl;
-//         - notifyListeners();
+    _isProcessing = false;
+    notifyListeners();
+  }
 
-// Step 5: إنشاء method setExtractedText(String text)
-//         - _extractedText = text;
-//         - notifyListeners();
+  /// معالجة كود QR
+  Future<void> processQr(String qrData) async {
+    _isProcessing = true;
+    _errorMessage = null;
+    notifyListeners();
 
-// Step 6: إنشاء method setAudioUrl(String url)
-//         - _audioUrl = url;
-//         - notifyListeners();
+    try {
+      final lesson = await _scanService.sendQrData(qrData);
+      _currentLesson = lesson;
+      _extractedText = lesson.originalText;
+      _audioUrl = lesson.audioUrl.isNotEmpty ? lesson.audioUrl : null;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+    }
 
-// Step 7: إنشاء method clearLesson()
-//         - _currentLesson = null;
-//         - _extractedText = null;
-//         - _audioUrl = null;
-//         - notifyListeners();
+    _isProcessing = false;
+    notifyListeners();
+  }
 
-// --- Notes ---
-// - يحفظ حالة الدرس أثناء التنقل بين الشاشات
-// - يستخدم في: scan_page_screen → text_display_screen → ai_chat_screen
-// - clearLesson() يُستدعى عند العودة للوحة الطالب
-// - النص المستخرج يمكن أن يأتي من: مسح كاميرا، QR، أو رفع ملف
+  /// تعيين درس مباشرة
+  void loadLesson(LessonModel lesson) {
+    _currentLesson = lesson;
+    _extractedText = lesson.originalText;
+    _audioUrl = lesson.audioUrl.isNotEmpty ? lesson.audioUrl : null;
+    notifyListeners();
+  }
+
+  /// تعيين درس (alias لـ loadLesson)
+  void setLesson(LessonModel lesson) => loadLesson(lesson);
+
+  /// توليد صوت من النص الحالي
+  Future<void> generateAudio() async {
+    if (_extractedText == null || _extractedText!.isEmpty) return;
+
+    _isProcessing = true;
+    notifyListeners();
+
+    try {
+      final url = await _ttsService.generateSpeech(_extractedText!);
+      _audioUrl = url;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+    }
+
+    _isProcessing = false;
+    notifyListeners();
+  }
+
+  /// تعيين النص المستخرج يدوياً
+  void setExtractedText(String text) {
+    _extractedText = text;
+    notifyListeners();
+  }
+
+  /// تعيين رابط الصوت يدوياً
+  void setAudioUrl(String url) {
+    _audioUrl = url;
+    notifyListeners();
+  }
+
+  /// تعيين حالة التحميل
+  void setLoading(bool value) {
+    _isProcessing = value;
+    notifyListeners();
+  }
+
+  /// مسح بيانات الدرس الحالي
+  void clearLesson() {
+    _currentLesson = null;
+    _extractedText = null;
+    _audioUrl = null;
+    _isProcessing = false;
+    _errorMessage = null;
+    notifyListeners();
+  }
+}

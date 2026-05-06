@@ -1,53 +1,109 @@
-// ============================================================
-// File: Button.tsx
-// Purpose: مكون الزر القابل لإعادة الاستخدام - يدعم عدة أنماط وأحجام
-// Owner: جود2 — Admin Developer
-// Branch: feature/admin-content
-// Week: 1 — بناء مكونات UI الأساسية
-// ============================================================
+'use client';
 
-// --- Required Imports ---
-// import { ButtonHTMLAttributes } from 'react';
-// import { Loader2 } from 'lucide-react';  // أيقونة التحميل الدوّارة
+import React from 'react';
 
-// --- Implementation Steps ---
-// Step 1: تعريف Props
-//   - interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-//       variant?: 'primary' | 'secondary' | 'danger';
-//       size?: 'sm' | 'md' | 'lg';
-//       isLoading?: boolean;
-//       children: React.ReactNode;
-//     }
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'ghost';
+  size?: 'default' | 'sm';
+  isLoading?: boolean;
+  children: React.ReactNode;
+}
 
-// Step 2: تعريف أنماط Tailwind لكل variant
-//   - const variants = {
-//       primary: 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500',
-//       secondary: 'bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-500 border border-gray-300',
-//       danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
-//     };
+export default function Button({
+  variant = 'primary',
+  size = 'default',
+  isLoading = false,
+  children,
+  disabled,
+  style,
+  ...props
+}: ButtonProps) {
+  const baseStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+    borderRadius: '9px',
+    fontWeight: 700,
+    fontSize: size === 'sm' ? '0.78rem' : '0.85rem',
+    padding: size === 'sm' ? '6px 13px' : '9px 18px',
+    fontFamily: 'Tajawal, sans-serif',
+    cursor: disabled || isLoading ? 'not-allowed' : 'pointer',
+    opacity: isLoading ? 0.7 : 1,
+    transition: 'all 0.18s ease',
+    border: 'none',
+    outline: 'none',
+    ...(variant === 'primary'
+      ? {
+          background: '#7C4DBC',
+          color: '#ffffff',
+          boxShadow: '0 3px 12px rgba(124,77,188,0.22)',
+        }
+      : {
+          background: 'transparent',
+          color: '#7A6E90',
+          border: '1.5px solid #DDD6EE',
+        }),
+    ...style,
+  };
 
-// Step 3: تعريف أنماط الأحجام
-//   - const sizes = {
-//       sm: 'px-3 py-1.5 text-sm',
-//       md: 'px-4 py-2 text-base',
-//       lg: 'px-6 py-3 text-lg',
-//     };
+  const handleMouseEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (disabled || isLoading) return;
+    if (variant === 'primary') {
+      e.currentTarget.style.background = '#5A2E9A';
+      e.currentTarget.style.transform = 'translateY(-1px)';
+    } else {
+      e.currentTarget.style.borderColor = '#7C4DBC';
+      e.currentTarget.style.color = '#7C4DBC';
+    }
+  };
 
-// Step 4: بناء المكون
-//   - الأنماط المشتركة: 'inline-flex items-center justify-center rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
-//   - دمج: className المشترك + variants[variant] + sizes[size] + className من Props
+  const handleMouseLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (disabled || isLoading) return;
+    if (variant === 'primary') {
+      e.currentTarget.style.background = '#7C4DBC';
+      e.currentTarget.style.transform = 'translateY(0)';
+    } else {
+      e.currentTarget.style.borderColor = '#DDD6EE';
+      e.currentTarget.style.color = '#7A6E90';
+    }
+  };
 
-// Step 5: حالة التحميل
-//   - if (isLoading): أظهر <Loader2 className="animate-spin ml-2 h-4 w-4" /> بجانب النص
-//   - اجعل الزر disabled أثناء التحميل
-//   - ml-2 (وليس mr-2) لأن الاتجاه RTL
-
-// Step 6: التصدير
-//   - export default function Button({ variant = 'primary', size = 'md', isLoading = false, children, className, ...props }: ButtonProps)
-
-// --- Notes ---
-// - المكون يرث جميع خصائص HTML button عبر ButtonHTMLAttributes
-// - استخدم cn() أو template literals لدمج الـ classes
-// - focus:ring للوصولية (accessibility) — مهم للمستخدمين الذين يتنقلون بلوحة المفاتيح
-// - disabled:opacity-50 يُعطي مظهر معطل واضح
-// - يمكن إضافة prop لأيقونة (icon) بجانب النص مستقبلاً
+  return (
+    <button
+      style={baseStyle}
+      disabled={disabled || isLoading}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      {...props}
+    >
+      {isLoading && (
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          style={{ animation: 'spin 1s linear infinite' }}
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeDasharray="32"
+            strokeLinecap="round"
+            opacity={0.3}
+          />
+          <path
+            d="M12 2a10 10 0 0 1 10 10"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+        </svg>
+      )}
+      {children}
+    </button>
+  );
+}

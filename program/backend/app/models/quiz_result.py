@@ -1,20 +1,20 @@
 import uuid
-from sqlalchemy import Column, Numeric, DateTime, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from datetime import datetime, timezone
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
 from app.database import Base
+from app.models.compat import PortableUUID
 
 
 class QuizResult(Base):
     __tablename__ = "quiz_results"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    student_id = Column(UUID(as_uuid=True), ForeignKey("students.id"), nullable=False)
-    quiz_id = Column(UUID(as_uuid=True), ForeignKey("quizzes.id"), nullable=False)
-    score = Column(Numeric(5, 2), nullable=False)
-    answers_detail = Column(JSONB, nullable=False)
-    taken_at = Column(DateTime(timezone=True), server_default=func.now())
+    id = Column(PortableUUID(), primary_key=True, default=uuid.uuid4)
+    student_id = Column(PortableUUID(), ForeignKey("students.id"), nullable=False)
+    quiz_id = Column(PortableUUID(), ForeignKey("quizzes.id"), nullable=False)
+    selected_answer = Column(String(200), nullable=False)
+    is_correct = Column(Boolean, nullable=False)
+    answered_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     student = relationship("Student", back_populates="quiz_results")
     quiz = relationship("Quiz", back_populates="results")

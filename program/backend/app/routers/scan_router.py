@@ -1,65 +1,103 @@
-# ============================================================
-# File: routers/scan_router.py
-# Purpose: نقاط نهاية المسح والتعرف على النص — OCR و QR
-# Owner: رنيم — API Developer
-# Branch: feature/backend-routers
-# Week: Week 2 — واجهات المسح الضوئي
-# ============================================================
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.services.ocr_service import extract_text_from_image
+from app.models.lesson import Lesson
+from app.models.user import User
+from app.middleware.auth_middleware import get_current_user
+from app.utils.helpers import format_response
 
-# --- Required Imports ---
-# from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Request
-# from sqlalchemy.orm import Session
-# from app.database import get_db
-# from app.services.ocr_service import extract_text_from_image
-# from app.models.lesson import Lesson
-# from app.utils.helpers import format_response
+router = APIRouter()
 
-# --- Implementation Steps ---
+ALLOWED_TYPES = {"image/jpeg", "image/png", "image/jpg"}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
-# Step 1: إنشاء الراوتر
-# - router = APIRouter()
 
-# Step 2: POST /ocr — استخراج النص من صورة بالكاميرا
-# - @router.post("/ocr")
-# - يحتاج مصادقة
-# - استلمي الصورة كـ UploadFile: image: UploadFile = File(...)
-# - تحققي من حجم الملف (أقصى 10MB):
-#   - contents = await image.read()
-#   - if len(contents) > 10 * 1024 * 1024: raise HTTPException(413)
-# - تحققي من نوع الملف (image/jpeg, image/png فقط)
-# - استدعي extract_text_from_image(contents) من ocr_service
-# - ارجعي format_response(True, {"extracted_text": text}, "تم استخراج النص بنجاح")
+class QRRequest(BaseModel):
+    qr_code: str
 
-# Step 3: POST /qr — البحث عن درس بكود QR
-# - @router.post("/qr")
-# - يحتاج مصادقة
-# - استلمي qr_code: str في body
-# - ابحثي في جدول lessons عن الدرس بـ qr_code
-# - لو ما لقيتيه — ارجعي 404: format_response(False, None, "الدرس غير موجود")
-# - ارجعي format_response(True, lesson_data, "تم العثور على الدرس")
 
-# Step 4: POST /upload — رفع صورة واستخراج النص
-# - @router.post("/upload")
-# - يحتاج مصادقة
-# - نفس منطق /ocr بس للصور المرفوعة من الجهاز (مو الكاميرا)
-# - استلمي file: UploadFile = File(...)
-# - تحققي من الحجم (أقصى 10MB) والنوع
-# - استدعي extract_text_from_image(contents)
-# - ارجعي format_response(True, {"extracted_text": text}, "تم استخراج النص بنجاح")
+@router.post("/ocr")
+async def ocr_scan(
+    image: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """Extract Arabic text from a camera image using OCR."""
+    try:
+        if image.content_type not in ALLOWED_TYPES:
+            raise HTTPException(
+                status_code=400,
+                detail=format_response(False, None, "نوع الملف غير مدعوم. استخدم JPEG أو PNG"),
+            )
 
-# --- Dependencies ---
-# - app/services/ocr_service.py (extract_text_from_image)
-# - app/models/lesson.py (Lesson model — للبحث بـ QR)
-# - app/database.py (get_db)
-# - app/middleware/auth_middleware.py (التحقق من التوكن)
+        contents = await image.read()
+        if len(contents) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=format_response(False, None, "حجم الملف يتجاوز 10 ميجابايت"),
+            )
 
-# --- API Endpoints ---
-# POST /api/scan/ocr     — استخراج النص من صورة الكاميرا
-# POST /api/scan/qr      — البحث عن درس بكود QR
-# POST /api/scan/upload   — رفع صورة واستخراج النص
+        text = extract_text_from_image(contents)
+        return format_response(True, {"extracted_text": text}, "تم استخراج النص بنجاح")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=format_response(False, None, str(e)))
 
-# --- Notes ---
-# - الحد الأقصى لحجم الملف: 10MB
-# - الأنواع المسموحة: image/jpeg, image/png
-# - استخدمي format_response دائماً: { success: bool, data: any, message: str }
-# - الـ OCR يستخدم EasyOCR للنص العربي
+
+@router.post("/qr")
+async def qr_lookup(
+    body: QRRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Look up a lesson by QR code."""
+    try:
+        lesson = db.query(Lesson).filter(Lesson.qr_code == body.qr_code).first()
+        if not lesson:
+            raise HTTPException(
+                status_code=404,
+                detail=format_response(False, None, "الدرس غير موجود"),
+            )
+        lesson_data = {
+            "id": str(lesson.id),
+            "title": lesson.title,
+            "subject": lesson.subject,
+            "grade_level": lesson.grade_level,
+            "original_text": lesson.original_text,
+            "audio_url": lesson.audio_url,
+        }
+        return format_response(True, lesson_data, "تم العثور على الدرس")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=format_response(False, None, str(e)))
+
+
+@router.post("/upload")
+async def upload_image(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """Upload an image file and extract Arabic text using OCR."""
+    try:
+        if file.content_type not in ALLOWED_TYPES:
+            raise HTTPException(
+                status_code=400,
+                detail=format_response(False, None, "نوع الملف غير مدعوم. استخدم JPEG أو PNG"),
+            )
+
+        contents = await file.read()
+        if len(contents) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=format_response(False, None, "حجم الملف يتجاوز 10 ميجابايت"),
+            )
+
+        text = extract_text_from_image(contents)
+        return format_response(True, {"extracted_text": text}, "تم استخراج النص بنجاح")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=format_response(False, None, str(e)))

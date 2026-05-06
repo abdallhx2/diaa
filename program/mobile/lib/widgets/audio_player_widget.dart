@@ -1,108 +1,168 @@
-// ============================================================
-// File: audio_player_widget.dart
-// Purpose: مشغل صوت — تشغيل/إيقاف/إعادة مع شريط تقدم
-// Owner: رهف — UI Developer
-// Branch: feature/flutter-parent
-// Week: 2 — ويدجت مشغل الصوت
-// ============================================================
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
+import 'package:edu_smart_assistant/config/theme.dart';
 
-// --- Required Imports ---
-// import 'package:flutter/material.dart';
-// import 'package:just_audio/just_audio.dart';
-// import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
+class AudioPlayerWidget extends StatefulWidget {
+  final String audioUrl;
 
-// --- Implementation Steps ---
-// Step 1: إنشاء StatefulWidget باسم AudioPlayerWidget
-//         - class AudioPlayerWidget extends StatefulWidget {
-//             final String audioUrl;
-//             const AudioPlayerWidget({required this.audioUrl});
-//           }
+  const AudioPlayerWidget({super.key, required this.audioUrl});
 
-// Step 2: تهيئة AudioPlayer في initState
-//         - final AudioPlayer _audioPlayer = AudioPlayer();
-//         - في initState:
-//           * await _audioPlayer.setUrl(widget.audioUrl);
+  @override
+  State<AudioPlayerWidget> createState() => _AudioPlayerWidgetState();
+}
 
-// Step 3: في dispose
-//         - _audioPlayer.dispose();
+class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _isInitialized = false;
+  bool _hasError = false;
 
-// Step 4: بناء واجهة المشغل
-//         - Container(
-//             padding: EdgeInsets.all(16),
-//             decoration: BoxDecoration(
-//               color: Colors.white,
-//               borderRadius: BorderRadius.circular(16),
-//               boxShadow: [...],
-//             ),
-//             child: Column(children: [
-//               // شريط التقدم (audio_video_progress_bar)
-//               StreamBuilder<Duration>(
-//                 stream: _audioPlayer.positionStream,
-//                 builder: (_, snapshot) {
-//                   return ProgressBar(
-//                     progress: snapshot.data ?? Duration.zero,
-//                     total: _audioPlayer.duration ?? Duration.zero,
-//                     buffered: _audioPlayer.bufferedPosition,
-//                     onSeek: (duration) => _audioPlayer.seek(duration),
-//                   );
-//                 },
-//               ),
-//               SizedBox(height: 8),
+  @override
+  void initState() {
+    super.initState();
+    _initPlayer();
+  }
 
-//               // أزرار التحكم
-//               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-//                 // زر الإعادة
-//                 IconButton(
-//                   icon: Icon(Icons.replay, size: 32),
-//                   onPressed: () => _audioPlayer.seek(Duration.zero),
-//                 ),
-//                 SizedBox(width: 16),
+  Future<void> _initPlayer() async {
+    try {
+      await _audioPlayer.setUrl(widget.audioUrl);
+      if (mounted) {
+        setState(() => _isInitialized = true);
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _hasError = true);
+      }
+    }
+  }
 
-//                 // زر التشغيل/الإيقاف (كبير 56dp)
-//                 StreamBuilder<PlayerState>(
-//                   stream: _audioPlayer.playerStateStream,
-//                   builder: (_, snapshot) {
-//                     final isPlaying = snapshot.data?.playing ?? false;
-//                     return FloatingActionButton(
-//                       heroTag: 'audio_play',
-//                       mini: false,  // حجم عادي 56dp
-//                       onPressed: () {
-//                         if (isPlaying) _audioPlayer.pause();
-//                         else _audioPlayer.play();
-//                       },
-//                       child: Icon(isPlaying ? Icons.pause : Icons.play_arrow, size: 32),
-//                     );
-//                   },
-//                 ),
-//                 SizedBox(width: 16),
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
+  }
 
-//                 // عرض الوقت: الحالي / الإجمالي
-//                 StreamBuilder<Duration>(
-//                   stream: _audioPlayer.positionStream,
-//                   builder: (_, snapshot) {
-//                     return Text(
-//                       '${_formatDuration(snapshot.data)} / ${_formatDuration(_audioPlayer.duration)}',
-//                       style: TextStyle(fontSize: 14),
-//                     );
-//                   },
-//                 ),
-//               ]),
-//             ]),
-//           )
+  String _formatDuration(Duration? duration) {
+    if (duration == null) return '0:00';
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
 
-// Step 5: إنشاء method _formatDuration(Duration? duration)
-//         - تحويل Duration لنص mm:ss
-//         - مثال: Duration(minutes: 2, seconds: 35) → "2:35"
+  @override
+  Widget build(BuildContext context) {
+    if (_hasError) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppTheme.radius),
+          boxShadow: const [AppTheme.shadow],
+        ),
+        child: Center(
+          child: Text(
+            'تعذر تحميل الصوت',
+            style: GoogleFonts.tajawal(
+              color: AppTheme.text200,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      );
+    }
 
-// Step 6: التعامل مع حالات الخطأ والتحميل
-//         - إذا جاري التحميل: عرض CircularProgressIndicator
-//         - إذا فشل التحميل: عرض "تعذر تحميل الصوت"
-//         - إذا انتهى الصوت: إعادة الموضع للبداية
+    if (!_isInitialized) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppTheme.radius),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation(AppTheme.primary100),
+          ),
+        ),
+      );
+    }
 
-// --- Notes ---
-// - just_audio: حزمة تشغيل الصوت من URL
-// - audio_video_progress_bar: شريط تقدم جاهز وجميل
-// - زر التشغيل كبير (56dp) لسهولة اللمس للأطفال
-// - StreamBuilder لتحديث الواجهة تلقائياً مع تغير حالة المشغل
-// - _audioPlayer.dispose() مهم جداً لمنع تسرب الذاكرة
-// - يمكن إضافة التشغيل التلقائي بـ _audioPlayer.play() في initState
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.radius),
+        boxShadow: const [AppTheme.shadow],
+      ),
+      child: Column(
+        children: [
+          StreamBuilder<Duration>(
+            stream: _audioPlayer.positionStream,
+            builder: (context, snapshot) {
+              return ProgressBar(
+                progress: snapshot.data ?? Duration.zero,
+                total: _audioPlayer.duration ?? Duration.zero,
+                buffered: _audioPlayer.bufferedPosition,
+                onSeek: (duration) => _audioPlayer.seek(duration),
+                baseBarColor: AppTheme.bg200,
+                progressBarColor: AppTheme.primary200,
+                bufferedBarColor: AppTheme.primary200.withValues(alpha: 0.3),
+                thumbColor: AppTheme.primary200,
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.replay, size: 32),
+                onPressed: () => _audioPlayer.seek(Duration.zero),
+                color: AppTheme.text200,
+              ),
+              const SizedBox(width: 16),
+              StreamBuilder<PlayerState>(
+                stream: _audioPlayer.playerStateStream,
+                builder: (context, snapshot) {
+                  final isPlaying = snapshot.data?.playing ?? false;
+                  return FloatingActionButton(
+                    heroTag: 'audio_play_${widget.audioUrl.hashCode}',
+                    mini: false,
+                    backgroundColor: AppTheme.primary200,
+                    onPressed: () {
+                      if (isPlaying) {
+                        _audioPlayer.pause();
+                      } else {
+                        _audioPlayer.play();
+                      }
+                    },
+                    child: Icon(
+                      isPlaying ? Icons.pause : Icons.play_arrow,
+                      size: 32,
+                      color: Colors.white,
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 16),
+              StreamBuilder<Duration>(
+                stream: _audioPlayer.positionStream,
+                builder: (context, snapshot) {
+                  return Text(
+                    '${_formatDuration(snapshot.data)} / ${_formatDuration(_audioPlayer.duration)}',
+                    style: GoogleFonts.tajawal(
+                      fontSize: 14,
+                      color: AppTheme.text200,
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}

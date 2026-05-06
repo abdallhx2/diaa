@@ -1,55 +1,59 @@
-from fastapi import Request
-from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi import Depends, HTTPException, Request
+from sqlalchemy.orm import Session
+from app.config import settings as _cfg
+from app.database import get_db
+from app.models.user import User
 
-PUBLIC_PATHS = [
-    "/",
-    "/docs",
-    "/openapi.json",
-    "/redoc",
-    "/api/auth/verify-token",
-    "/api/auth/register-parent",
-]
+# Only import Firebase SDK when not in mock mode
+if not _cfg.USE_MOCKS:
+    from firebase_admin import auth
 
 
-class AuthMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        if request.url.path in PUBLIC_PATHS:
-            return await call_next(request)
+async def verify_firebase_token(request: Request) -> dict:
+    """FastAPI dependency: extracts Bearer token, verifies with Firebase, returns decoded dict."""
+    authorization = request.headers.get("Authorization")
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=401,
+            detail={"success": False, "data": None, "message": "التوكن مطلوب"},
+        )
+    token = authorization.split("Bearer ")[1]
+    try:
+        from app.config import settings
+        if settings.USE_MOCKS:
+            from app.services.mock_services import MockFirebaseAuth
+            decoded_token = MockFirebaseAuth.verify_id_token(token)
+            return decoded_token
 
-        authorization = request.headers.get("Authorization")
-        if not authorization or not authorization.startswith("Bearer "):
-            return JSONResponse(
-                status_code=401,
-                content={"success": False, "data": None, "message": "Missing or invalid authorization header"},
-            )
+        decoded_token = auth.verify_id_token(token)
+        return decoded_token
+    except Exception:
+        raise HTTPException(
+            status_code=401,
+            detail={"success": False, "data": None, "message": "التوكن غير صالح أو منتهي الصلاحية"},
+        )
 
-        token = authorization.split("Bearer ")[1]
 
-        try:
-            from app.services.auth_service import verify_firebase_token
-            from app.database import SessionLocal
-            from app.models.user import User
-
-            decoded = verify_firebase_token(token)
-            firebase_uid = decoded.get("uid")
-
-            db = SessionLocal()
-            try:
-                user = db.query(User).filter(User.firebase_uid == firebase_uid).first()
-                if not user:
-                    return JSONResponse(
-                        status_code=401,
-                        content={"success": False, "data": None, "message": "User not found"},
-                    )
-                request.state.user = user
-            finally:
-                db.close()
-
-        except Exception:
-            return JSONResponse(
-                status_code=401,
-                content={"success": False, "data": None, "message": "Invalid or expired token"},
-            )
-
-        return await call_next(request)
+async def get_current_user(
+    decoded_token: dict = Depends(verify_firebase_token),
+    db: Session = Depends(get_db),
+) -> User:
+    """FastAPI dependency: fetches User from DB using firebase_uid from decoded token."""
+    firebase_uid = decoded_token.get("uid")
+    if not firebase_uid:
+        raise HTTPException(
+            status_code=401,
+            detail={"success": False, "data": None, "message": "بيانات التوكن غير صالحة"},
+        )
+    user = db.query(User).filter(User.firebase_uid == firebase_uid).first()
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail={"success": False, "data": None, "message": "المستخدم غير موجود"},
+        )
+    if not user.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail={"success": False, "data": None, "message": "الحساب معطل"},
+        )
+    return user

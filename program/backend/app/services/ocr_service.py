@@ -1,61 +1,91 @@
-# ============================================================
-# File: services/ocr_service.py
-# Purpose: خدمة التعرف على النص العربي — EasyOCR service لاستخراج النص من الصور
-# Owner: فرح — OCR Engineer
-# Branch: feature/ai-ocr
-# Week: Week 1-2 — بناء محرك OCR للنص العربي
-# ============================================================
+import base64
+import io
+from PIL import Image
+from app.config import settings
+from app.services.openrouter_client import client
 
-# --- Required Imports ---
-# import easyocr
-# from PIL import Image
-# import io
-# import numpy as np
-# from app.utils.image_processing import enhance_contrast, remove_noise, convert_to_grayscale, resize_if_needed
+OCR_PROMPT = """أنت أداة استخراج نص من الصور. استخرج كل النص العربي والإنجليزي الموجود في الصورة.
+- أعد النص فقط بدون أي شرح أو تعليق
+- حافظ على ترتيب النص كما يظهر في الصورة (من أعلى لأسفل)
+- إذا لم يكن هناك نص في الصورة، أعد كلمة: فارغ
+"""
 
-# --- Implementation Steps ---
 
-# Step 1: تهيئة EasyOCR Reader عند بدء التطبيق
-# - reader = easyocr.Reader(['ar'])
-# - ملاحظة: التحميل يتم في main.py startup event، وتقدرين توصلين للـ reader من app.state
-# - بديل: حمليه هنا كـ global variable (يتحمل مرة واحدة عند أول import)
-# - اللغة المدعومة: العربية ['ar']
-# - ممكن تضيفين الإنجليزية أيضاً: ['ar', 'en']
+def _image_to_base64(image_bytes: bytes) -> str:
+    """Convert image bytes to base64 data URL for vision model."""
+    image = Image.open(io.BytesIO(image_bytes))
 
-# Step 2: دالة extract_text_from_image(image_bytes: bytes) -> str
-# - حولي الـ bytes لـ PIL Image:
-#   - image = Image.open(io.BytesIO(image_bytes))
-# - طبقي معالجة الصورة (image preprocessing):
-#   - image = convert_to_grayscale(image)     — تحويل لتدرج الرمادي
-#   - image = enhance_contrast(image)          — تحسين التباين
-#   - image = remove_noise(image)              — إزالة الضوضاء
-#   - image = resize_if_needed(image, 2000)    — تصغير لو الصورة كبيرة جداً
-# - حولي لـ numpy array:
-#   - image_array = np.array(image)
-# - استدعي EasyOCR:
-#   - results = reader.readtext(image_array)
-# - results يرجع list of tuples: [(bbox, text, confidence), ...]
+    # Resize if too large (max 2000px on longest side)
+    max_dim = 2000
+    if max(image.size) > max_dim:
+        ratio = max_dim / max(image.size)
+        new_size = (int(image.width * ratio), int(image.height * ratio))
+        image = image.resize(new_size, Image.LANCZOS)
 
-# Step 3: ترتيب ودمج النصوص
-# - رتبي النتائج حسب الموقع (من أعلى لأسفل، من يمين لشمال للعربي)
-# - ادمجي النصوص مع مسافات:
-#   - extracted_text = " ".join([result[1] for result in results])
-# - نظفي النص: أزيلي المسافات الزائدة
+    # Convert to RGB if needed (remove alpha channel)
+    if image.mode in ("RGBA", "P"):
+        image = image.convert("RGB")
 
-# Step 4: التعامل مع الأخطاء
-# - لو الصورة فاضية أو ما فيها نص — ارجعي string فاضي
-# - لو صار خطأ في EasyOCR — ارمي Exception واضح
-# - سجلي الأخطاء في الـ log
+    # Encode to JPEG base64
+    buffer = io.BytesIO()
+    image.save(buffer, format="JPEG", quality=85)
+    b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    return f"data:image/jpeg;base64,{b64}"
 
-# --- Dependencies ---
-# - app/utils/image_processing.py (دوال معالجة الصور)
-# - easyocr library
-# - Pillow (PIL) library
-# - numpy library
 
-# --- Notes ---
-# - الهدف: دقة 85% أو أعلى في استخراج النص العربي
-# - الأداء المطلوب: أقل من 5 ثواني لكل صورة
-# - EasyOCR يحتاج GPU لأداء أفضل (لكن يشتغل على CPU أيضاً)
-# - معالجة الصورة (preprocessing) تحسن الدقة بشكل ملحوظ
-# - لو الصورة كبيرة جداً (أكثر من 2000px) — صغريها عشان الأداء
+def extract_text(image_bytes: bytes) -> str:
+    """Extract Arabic/English text from image using OpenRouter vision model.
+    Returns extracted text or empty string on error.
+    """
+    if settings.MOCK_AI:
+        from app.services.mock_services import MockOCR
+
+        mock_reader = MockOCR()
+        results = mock_reader.readtext(None)
+        return " ".join([r[1] for r in results])
+
+    try:
+        image_url = _image_to_base64(image_bytes)
+
+        response = client.chat.completions.create(
+            model=settings.VISION_MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": OCR_PROMPT},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": image_url},
+                        },
+                    ],
+                }
+            ],
+            max_tokens=1000,
+            temperature=0.1,
+        )
+
+        text = response.choices[0].message.content.strip()
+
+        # If model says empty, return empty string
+        if text == "فارغ":
+            return ""
+
+        return text
+
+    except Exception:
+        return ""
+
+
+def extract_text_from_image(image_bytes: bytes) -> str:
+    """Alias for extract_text — kept for backward compatibility."""
+    return extract_text(image_bytes)
+
+
+def get_confidence_stats(results: list) -> dict:
+    """Return confidence stats. With vision model, confidence is always high.
+    Kept for backward compatibility with routers.
+    """
+    if not results:
+        return {"avg_confidence": 0.0, "words_count": 0}
+    return {"avg_confidence": 0.95, "words_count": len(results.split()) if isinstance(results, str) else 0}

@@ -1,86 +1,102 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.services.auth_service import verify_firebase_token, get_or_create_user, register_parent, add_child_to_parent
+from app.database import get_db
+from app.services.auth_service import (
+    verify_firebase_token,
+    get_or_create_user,
+    register_parent,
+    add_child,
+    get_user_profile,
+)
+from app.schemas.auth_schema import (
+    TokenVerifyRequest,
+    RegisterParentRequest,
+    AddChildRequest,
+    UserResponse,
+)
+from app.middleware.auth_middleware import get_current_user, verify_firebase_token as verify_firebase_token_dep
+from app.models.user import User
 from app.utils.helpers import format_response
-from pydantic import BaseModel
-from typing import Optional
 
 router = APIRouter()
 
 
-class TokenVerifyRequest(BaseModel):
-    token: str
-    role: Optional[str] = "student"
-
-
-class RegisterParentRequest(BaseModel):
-    name: str
-    email: str
-    password: str
-    phone: Optional[str] = None
-
-
-class AddChildRequest(BaseModel):
-    name: str
-    age: Optional[int] = None
-    grade: Optional[str] = None
-    learning_level: Optional[str] = None
-
-
 @router.post("/verify-token")
-def verify_token(body: TokenVerifyRequest):
+async def verify_token(body: TokenVerifyRequest, db: Session = Depends(get_db)):
+    """Verify Firebase token and get or create user."""
     try:
         decoded = verify_firebase_token(body.token)
-        user = get_or_create_user(
-            firebase_uid=decoded["uid"],
-            role=body.role,
-            name=decoded.get("name", ""),
-            email=decoded.get("email", ""),
-        )
-        return format_response(True, {
-            "id": str(user.id),
-            "name": user.name,
-            "email": user.email,
-            "role": user.role,
-        }, "تم التحقق بنجاح")
+        uid = decoded.get("uid", "")
+        email = decoded.get("email")
+        name = decoded.get("name", decoded.get("email", "مستخدم"))
+        role = decoded.get("role", "student")
+
+        user = get_or_create_user(db, firebase_uid=uid, role=role, name=name, email=email)
+        profile = get_user_profile(db, user)
+        return format_response(True, profile, "تم التحقق بنجاح")
     except Exception as e:
-        raise HTTPException(status_code=401, detail=str(e))
+        raise HTTPException(status_code=401, detail=format_response(False, None, str(e)))
 
 
 @router.post("/register-parent")
-def register_parent_endpoint(body: RegisterParentRequest):
+async def register_parent_endpoint(
+    body: RegisterParentRequest,
+    current_user_token: dict = Depends(verify_firebase_token_dep),
+    db: Session = Depends(get_db),
+):
+    """Register a new parent account. Parent must already be authenticated via Firebase."""
     try:
-        parent_data = register_parent(body.dict())
-        return format_response(True, parent_data, "تم تسجيل ولي الأمر بنجاح")
+        firebase_uid = current_user_token.get("uid", "")
+
+        # Check if user already exists in DB
+        existing = get_or_create_user(db, firebase_uid=firebase_uid, role="parent", name=body.name, email=body.email)
+        if existing.phone != body.phone and body.phone:
+            existing.phone = body.phone
+            db.commit()
+            db.refresh(existing)
+
+        profile = get_user_profile(db, existing)
+        return format_response(True, profile, "تم تسجيل ولي الأمر بنجاح")
     except Exception as e:
-        if "EMAIL_EXISTS" in str(e):
-            raise HTTPException(status_code=400, detail="البريد الإلكتروني مستخدم بالفعل")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=format_response(False, None, str(e)))
 
 
 @router.post("/add-child")
-def add_child(body: AddChildRequest, request: Request):
+async def add_child_endpoint(
+    body: AddChildRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Add a child to the authenticated parent's account."""
+    if current_user.role.value != "parent":
+        raise HTTPException(status_code=403, detail=format_response(False, None, "يجب أن تكون ولي أمر"))
+
     try:
-        user = request.state.user
-        if user.role != "parent":
-            raise HTTPException(status_code=403, detail="هذا الإجراء مخصص لأولياء الأمور فقط")
-        parent_id = str(user.parent.id)
-        child_data = add_child_to_parent(parent_id, body.dict())
-        return format_response(True, child_data, "تم إضافة الطفل بنجاح")
-    except HTTPException:
-        raise
+        child_user = add_child(
+            db,
+            parent_user=current_user,
+            child_firebase_uid=body.child_firebase_uid,
+            child_name=body.child_name,
+            age=body.age,
+            grade=body.grade,
+            learning_level=body.learning_level or "مبتدئ",
+        )
+        return format_response(True, {
+            "id": str(child_user.id),
+            "name": child_user.name,
+        }, "تم إضافة الطفل بنجاح")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=format_response(False, None, str(e)))
 
 
 @router.get("/me")
-def get_me(request: Request):
-    user = request.state.user
-    return format_response(True, {
-        "id": str(user.id),
-        "name": user.name,
-        "email": user.email,
-        "role": user.role,
-        "phone": user.phone,
-        "created_at": str(user.created_at),
-    }, "بيانات المستخدم")
+async def get_me(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get current authenticated user's profile."""
+    try:
+        profile = get_user_profile(db, current_user)
+        return format_response(True, profile, "بيانات المستخدم")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=format_response(False, None, str(e)))

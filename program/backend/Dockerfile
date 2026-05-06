@@ -35,7 +35,7 @@ EXPOSE 8000
 # Step 8: تشغيل التطبيق باستخدام uvicorn
 # - host 0.0.0.0 عشان يكون متاح من خارج الـ container
 # - port يُقرأ من متغير البيئة PORT (Railway يحدده تلقائياً)
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
 
 # --- Notes ---
 # - python:3.11-slim أخف من python:3.11 العادية (حجم أقل)

@@ -1,70 +1,138 @@
-// ============================================================
-// File: custom_button.dart
-// Purpose: زر مخصص قابل لإعادة الاستخدام — تصميم موحد في كل التطبيق
-// Owner: رهف — UI Developer
-// Branch: feature/flutter-parent
-// Week: 1 — إعداد الـ Widgets الأساسية
-// ============================================================
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:edu_smart_assistant/config/theme.dart';
 
-// --- Required Imports ---
-// import 'package:flutter/material.dart';
-// import 'package:edu_smart_assistant/config/theme.dart';
+enum ButtonVariant { primary, outline, white, ghost }
 
-// --- Implementation Steps ---
-// Step 1: إنشاء StatelessWidget باسم CustomButton
-//         - class CustomButton extends StatelessWidget { ... }
+class CustomButton extends StatelessWidget {
+  final String text;
+  final VoidCallback? onPressed;
+  final Color? color;
+  final bool isLoading;
+  final IconData? icon;
+  final double? width;
+  final ButtonVariant variant;
 
-// Step 2: تعريف الخصائص (Props)
-//         - final String text;              // نص الزر بالعربي
-//         - final VoidCallback? onPressed;   // دالة عند الضغط
-//         - final Color? color;              // لون الزر (افتراضي: primaryBlue)
-//         - final bool isLoading;            // هل في حالة تحميل؟
-//         - final IconData? icon;            // أيقونة اختيارية
+  const CustomButton({
+    super.key,
+    required this.text,
+    required this.onPressed,
+    this.color,
+    this.isLoading = false,
+    this.icon,
+    this.width,
+    this.variant = ButtonVariant.primary,
+  });
 
-// Step 3: إنشاء Constructor
-//         - const CustomButton({
-//             required this.text,
-//             required this.onPressed,
-//             this.color,
-//             this.isLoading = false,
-//             this.icon,
-//           });
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width ?? double.infinity,
+      child: _buildButton(),
+    );
+  }
 
-// Step 4: بناء الزر
-//         - return ElevatedButton(
-//             onPressed: isLoading ? null : onPressed,
-//             style: ElevatedButton.styleFrom(
-//               backgroundColor: color ?? AppTheme.primaryBlue,
-//               foregroundColor: Colors.white,
-//               minimumSize: Size(double.infinity, 48),  // عرض كامل، ارتفاع 48dp
-//               shape: RoundedRectangleBorder(
-//                 borderRadius: BorderRadius.circular(12),
-//               ),
-//               elevation: 2,
-//             ),
-//             child: isLoading
-//               ? SizedBox(
-//                   height: 24, width: 24,
-//                   child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-//                 )
-//               : Row(
-//                   mainAxisAlignment: MainAxisAlignment.center,
-//                   mainAxisSize: MainAxisSize.min,
-//                   children: [
-//                     if (icon != null) ...[
-//                       Icon(icon, size: 20),
-//                       SizedBox(width: 8),
-//                     ],
-//                     Text(text, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-//                   ],
-//                 ),
-//           );
+  Widget _buildButton() {
+    final bgColor = _backgroundColor;
+    final fgColor = _foregroundColor;
+    final border = _border;
+    final shadow = _shadow;
 
-// --- Notes ---
-// - الحد الأدنى للارتفاع 48dp (سهولة اللمس للأطفال)
-// - عند isLoading = true: يعرض CircularProgressIndicator ويعطل الضغط
-// - ألوان باستيل ناعمة مع نص أبيض
-// - حدود مستديرة (borderRadius: 12)
-// - خط عربي بحجم 18 وسمك w600
-// - يمكن إضافة أيقونة اختياريةBeside النص
-// - يُستخدم في جميع شاشات التطبيق
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: shadow != null ? [shadow] : [],
+      ),
+      child: ElevatedButton(
+        onPressed: isLoading ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: bgColor,
+          foregroundColor: fgColor,
+          minimumSize: const Size(double.infinity, 48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: border ?? BorderSide.none,
+          ),
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+        ),
+        child: isLoading
+            ? SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(
+                  color: fgColor,
+                  strokeWidth: 2,
+                ),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, size: 20),
+                    const SizedBox(width: 8),
+                  ],
+                  Text(
+                    text,
+                    style: GoogleFonts.tajawal(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Color get _backgroundColor {
+    if (color != null && variant == ButtonVariant.primary) return color!;
+    switch (variant) {
+      case ButtonVariant.primary:
+        return AppTheme.primary200;
+      case ButtonVariant.outline:
+        return Colors.transparent;
+      case ButtonVariant.white:
+        return Colors.white;
+      case ButtonVariant.ghost:
+        return Colors.white.withValues(alpha: 0.15);
+    }
+  }
+
+  Color get _foregroundColor {
+    switch (variant) {
+      case ButtonVariant.primary:
+        return Colors.white;
+      case ButtonVariant.outline:
+        return AppTheme.primary200;
+      case ButtonVariant.white:
+        return AppTheme.primary200;
+      case ButtonVariant.ghost:
+        return Colors.white;
+    }
+  }
+
+  BorderSide? get _border {
+    switch (variant) {
+      case ButtonVariant.outline:
+        return const BorderSide(color: AppTheme.primary100, width: 2);
+      default:
+        return null;
+    }
+  }
+
+  BoxShadow? get _shadow {
+    switch (variant) {
+      case ButtonVariant.primary:
+        return const BoxShadow(
+          color: Color(0x668B5FBF),
+          blurRadius: 16,
+          offset: Offset(0, 4),
+        );
+      default:
+        return null;
+    }
+  }
+}

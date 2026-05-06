@@ -1,0 +1,6 @@
+- generic [ref=e3]:
+  - button "Enable accessibility" [ref=e4]
+  - generic [active] [ref=e7]:
+    - generic:
+      - generic:
+        - img

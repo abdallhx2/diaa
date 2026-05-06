@@ -2,41 +2,42 @@ import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 
 class StorageService {
-// Step 1: الاتصال بـ Firebase Storage
-final FirebaseStorage _storage = FirebaseStorage.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
-// Step 2: رفع صورة
-Future<String> uploadImage(File file, String path) async {
-// تحديد مكان الحفظ في Firebase
-Reference ref = _storage.ref().child(path);
+  /// رفع صورة إلى Firebase Storage
+  Future<String> uploadImage(File file, {String? path}) async {
+    try {
+      final storagePath =
+          path ?? 'images/uploads/${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final ref = _storage.ref().child(storagePath);
 
-// بدء الرفع
-UploadTask uploadTask = ref.putFile(file);
+      final uploadTask = ref.putFile(file);
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
 
-// متابعة نسبة الرفع
-uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
-double progress = snapshot.bytesTransferred / snapshot.totalBytes;
-print('نسبة الرفع: ${(progress * 100).toStringAsFixed(0)}%');
-});
+      return downloadUrl;
+    } catch (e) {
+      throw Exception('فشل في رفع الصورة');
+    }
+  }
 
-// انتظار اكتمال الرفع
-TaskSnapshot snapshot = await uploadTask;
+  /// جلب رابط تحميل ملف
+  Future<String> getDownloadUrl(String path) async {
+    try {
+      final ref = _storage.ref().child(path);
+      return await ref.getDownloadURL();
+    } catch (e) {
+      throw Exception('فشل في جلب رابط الملف');
+    }
+  }
 
-// إرجاع رابط الصورة
-String downloadUrl = await snapshot.ref.getDownloadURL();
-return downloadUrl;
-}
-
-// Step 3: جلب رابط ملف
-Future<String> getFileUrl(String path) async {
-Reference ref = _storage.ref().child(path);
-String url = await ref.getDownloadURL();
-return url;
-}
-
-// Step 4: حذف ملف
-Future<void> deleteFile(String path) async {
-Reference ref = _storage.ref().child(path);
-await ref.delete();
-}
+  /// حذف ملف من Storage
+  Future<void> deleteFile(String path) async {
+    try {
+      final ref = _storage.ref().child(path);
+      await ref.delete();
+    } catch (e) {
+      throw Exception('فشل في حذف الملف');
+    }
+  }
 }

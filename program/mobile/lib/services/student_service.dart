@@ -1,46 +1,56 @@
 import 'package:edu_smart_assistant/services/api_service.dart';
 import 'package:edu_smart_assistant/models/session_model.dart';
-import 'package:dio/dio.dart';
 
 class StudentService {
-// Step 1: الاتصال بـ ApiService
-final ApiService _apiService = ApiService();
+  final ApiService _apiService = ApiService();
 
-// Step 2: جلب لوحة تحكم الطالب
-Future<Map<String, dynamic>> getDashboard() async {
-try {
-Response response = await _apiService.get('/student/dashboard');
-return response.data;
+  /// جلب بيانات لوحة تحكم الطالب
+  Future<Map<String, dynamic>> getDashboard() async {
+    try {
+      final response = await _apiService.get('/student/dashboard');
 
-} catch (e) {
-throw Exception('حدث خطأ في جلب لوحة التحكم');
-}
-}
+      final data = response.data;
+      if (data['success'] == true) {
+        return data['data'] as Map<String, dynamic>;
+      }
+      throw Exception(data['message'] ?? 'فشل في جلب بيانات لوحة التحكم');
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('فشل في جلب بيانات لوحة التحكم');
+    }
+  }
 
-// Step 3: جلب جلسات التعلم
-Future<List<SessionModel>> getSessions() async {
-try {
-Response response = await _apiService.get('/student/sessions');
+  /// جلب قائمة جلسات التعلم
+  Future<List<SessionModel>> getSessions() async {
+    try {
+      final response = await _apiService.get('/student/sessions');
 
-List<SessionModel> sessions = (response.data as List)
-.map((e) => SessionModel.fromJson(e))
-.toList();
+      final data = response.data;
+      if (data['success'] == true) {
+        final list = data['data'] as List<dynamic>;
+        return list
+            .map((e) => SessionModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      throw Exception('فشل في جلب الجلسات');
+    }
+  }
 
-return sessions;
+  /// جلب بيانات تقدم الطالب
+  Future<Map<String, dynamic>> getProgress() async {
+    try {
+      final response = await _apiService.get('/student/progress');
 
-} catch (e) {
-throw Exception('حدث خطأ في جلب الجلسات');
-}
-}
-
-// Step 4: جلب تقدم الطالب
-Future<Map<String, dynamic>> getProgress() async {
-try {
-Response response = await _apiService.get('/student/progress');
-return response.data;
-
-} catch (e) {
-throw Exception('حدث خطأ في جلب بيانات التقدم');
-}
-}
+      final data = response.data;
+      if (data['success'] == true) {
+        return data['data'] as Map<String, dynamic>;
+      }
+      throw Exception(data['message'] ?? 'فشل في جلب بيانات التقدم');
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('فشل في جلب بيانات التقدم');
+    }
+  }
 }

@@ -1,53 +1,81 @@
-// ============================================================
-// File: chat_provider.dart
-// Purpose: إدارة حالة المحادثة الذكية — الرسائل، الإرسال، التاريخ
-// Owner: ديمة — Flutter Lead
-// Branch: feature/flutter-student
-// Week: 3 — شاشات الاختبارات والمحادثة الذكية
-// ============================================================
+import 'package:flutter/material.dart';
+import 'package:edu_smart_assistant/models/chat_message_model.dart';
+import 'package:edu_smart_assistant/services/chat_service.dart';
+import 'package:edu_smart_assistant/config/constants.dart';
 
-// --- Required Imports ---
-// import 'package:flutter/material.dart';
-// import 'package:edu_smart_assistant/models/chat_message_model.dart';
-// import 'package:edu_smart_assistant/services/chat_service.dart';
-// import 'package:edu_smart_assistant/config/constants.dart';
+class ChatProvider extends ChangeNotifier {
+  List<ChatMessageModel> _messages = [];
+  bool _isLoading = false;
+  String? _errorMessage;
+  String? _currentLessonId;
+  final ChatService _chatService = ChatService();
 
-// --- Implementation Steps ---
-// Step 1: إنشاء class ChatProvider extends ChangeNotifier
-//         - class ChatProvider extends ChangeNotifier { ... }
+  List<ChatMessageModel> get messages => _messages;
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+  String? get currentLessonId => _currentLessonId;
+  int get messageCount => _messages.length;
+  bool get canSendMore => _messages.where((m) => m.role == 'user').length < AppConstants.maxChatMessages;
 
-// Step 2: تعريف الحقول (Fields)
-//         - List<ChatMessageModel> _messages = [];    // قائمة الرسائل
-//         - bool _isLoading = false;                   // جاري إرسال/استقبال رسالة
-//         - int get messageCount => _messages.length;  // عدد الرسائل الحالي
-//         - final ChatService _chatService = ChatService();
+  Future<void> sendMessage(String question, String lessonId) async {
+    if (!canSendMore) {
+      _errorMessage = 'وصلت الحد الأقصى للرسائل (${AppConstants.maxChatMessages})';
+      notifyListeners();
+      return;
+    }
 
-// Step 3: إنشاء Getters
-//         - List<ChatMessageModel> get messages => _messages;
-//         - bool get isLoading => _isLoading;
-//         - int get messageCount => _messages.length;
-//         - bool get canSendMore => _messages.length < AppConstants.maxChatMessages;
+    _errorMessage = null;
+    _currentLessonId = lessonId;
 
-// Step 4: إنشاء method sendMessage(String question, String lessonId)
-//         - التحقق: إذا messageCount >= 20 → عرض رسالة "وصلت الحد الأقصى للرسائل"
-//         - _isLoading = true; notifyListeners();
-//         - استدعاء _chatService.askQuestion(question, lessonId)
-//         - إنشاء ChatMessageModel من الاستجابة (answer + audioUrl)
-//         - إضافة الرسالة لـ _messages
-//         - _isLoading = false; notifyListeners();
+    // Add user message immediately
+    final userMsg = ChatMessageModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      role: 'user',
+      content: question,
+      lessonId: lessonId,
+      createdAt: DateTime.now(),
+    );
+    _messages.add(userMsg);
+    _isLoading = true;
+    notifyListeners();
 
-// Step 5: إنشاء method loadHistory(String lessonId)
-//         - استدعاء _chatService.getHistory(lessonId)
-//         - _messages = القائمة المُرجعة
-//         - notifyListeners();
+    try {
+      final response = await _chatService.askQuestion(question, lessonId);
+      final botMsg = ChatMessageModel(
+        id: '${DateTime.now().millisecondsSinceEpoch}_bot',
+        role: 'assistant',
+        content: response['answer'] ?? '',
+        lessonId: lessonId,
+        createdAt: DateTime.now(),
+      );
+      _messages.add(botMsg);
+    } catch (e) {
+      _errorMessage = 'فشل في إرسال السؤال، حاول مرة أخرى';
+    }
 
-// Step 6: إنشاء method clearChat()
-//         - _messages = [];
-//         - notifyListeners();
+    _isLoading = false;
+    notifyListeners();
+  }
 
-// --- Notes ---
-// - الحد الأقصى 20 رسالة لكل جلسة (من constants.dart)
-// - كل رسالة تحتوي على سؤال الطالب + رد المساعد + رابط الصوت
-// - loadHistory() يُستدعى عند فتح شاشة المحادثة لتحميل المحادثات السابقة
-// - يجب تشغيل الصوت تلقائياً عند وصول رد المساعد
-// - clearChat() يُستدعى عند مغادرة شاشة المحادثة أو بدء درس جديد
+  Future<void> loadHistory(String lessonId) async {
+    _isLoading = true;
+    _currentLessonId = lessonId;
+    notifyListeners();
+
+    try {
+      _messages = await _chatService.getHistory(lessonId);
+    } catch (_) {
+      _messages = [];
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  void clearChat() {
+    _messages = [];
+    _errorMessage = null;
+    _currentLessonId = null;
+    notifyListeners();
+  }
+}

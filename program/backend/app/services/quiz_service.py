@@ -1,70 +1,140 @@
-# ============================================================
-# File: services/quiz_service.py
-# Purpose: خدمة الاختبارات — منطق الأسئلة والإجابات وحساب الدرجات
-# Owner: فدوه — AI Chat + Quiz Logic
-# Branch: feature/ai-chat
-# Week: Week 2 — بناء نظام الاختبارات
-# ============================================================
+import random
+from uuid import UUID
+from sqlalchemy.orm import Session
+from app.models.quiz import Quiz
+from app.models.quiz_result import QuizResult
 
-# --- Required Imports ---
-# import random
-# from sqlalchemy.orm import Session
-# from app.database import SessionLocal
-# from app.models.quiz import Quiz
-# from app.models.quiz_result import QuizResult
-# from app.utils.helpers import generate_uuid, get_current_timestamp
 
-# --- Implementation Steps ---
+def get_quizzes_by_lesson(db: Session, lesson_id: UUID) -> list:
+    """Get all quizzes for a lesson. Does NOT include correct_answer."""
+    try:
+        quizzes = db.query(Quiz).filter(Quiz.lesson_id == lesson_id).all()
+        result = []
+        for q in quizzes:
+            result.append({
+                "id": str(q.id),
+                "lesson_id": str(q.lesson_id),
+                "quiz_type": q.quiz_type.value if hasattr(q.quiz_type, "value") else q.quiz_type,
+                "question_text": q.question_text,
+                "options": q.options,
+                "created_at": str(q.created_at) if q.created_at else None,
+            })
+        return result
+    except Exception as e:
+        raise Exception(f"خطأ في جلب الاختبارات: {str(e)}")
 
-# Step 1: دالة get_quizzes_for_lesson(lesson_id: UUID, quiz_type: str = None) -> list
-# - اجلبي الاختبارات من DB:
-#   - query = db.query(Quiz).filter(Quiz.lesson_id == lesson_id)
-#   - لو quiz_type محدد: query = query.filter(Quiz.quiz_type == quiz_type)
-# - حولي النتائج لـ list of dicts
-# - عشوئي ترتيب الأسئلة:
-#   - random.shuffle(quizzes)
-# - ملاحظة: لا ترجعي correct_answer!
-# - ارجعي القائمة
 
-# Step 2: دالة submit_quiz(student_id: UUID, quiz_id: UUID, answers: list) -> dict
-# - اجلبي الاختبار من DB بـ quiz_id
-# - لو ما لقيتيه — ارمي Exception
-# - استدعي calculate_score(answers, quiz.correct_answer)
-# - أنشئي QuizResult:
-#   - result = QuizResult(
-#       id=generate_uuid(),
-#       student_id=student_id,
-#       quiz_id=quiz_id,
-#       score=calculated_score,
-#       answers_detail=answers_detail_json,
-#       taken_at=get_current_timestamp()
-#   )
-# - db.add(result) → db.commit()
-# - ارجعي النتيجة
+def get_quizzes_by_type(db: Session, quiz_type: str) -> list:
+    """Get all quizzes of a given type. Does NOT include correct_answer."""
+    try:
+        quizzes = db.query(Quiz).filter(Quiz.quiz_type == quiz_type).all()
+        result = []
+        for q in quizzes:
+            result.append({
+                "id": str(q.id),
+                "lesson_id": str(q.lesson_id),
+                "quiz_type": q.quiz_type.value if hasattr(q.quiz_type, "value") else q.quiz_type,
+                "question_text": q.question_text,
+                "options": q.options,
+                "created_at": str(q.created_at) if q.created_at else None,
+            })
+        return result
+    except Exception as e:
+        raise Exception(f"خطأ في جلب الاختبارات حسب النوع: {str(e)}")
 
-# Step 3: دالة calculate_score(answers: list, correct_answers: list) -> tuple(score, details)
-# - قارني كل إجابة مع الإجابة الصحيحة
-# - احسبي عدد الإجابات الصحيحة
-# - احسبي النسبة المئوية: score = (correct_count / total_count) * 100
-# - أنشئي answers_detail:
-#   - [{"question": "...", "student_answer": "...", "correct_answer": "...", "is_correct": True/False}, ...]
-# - ارجعي (score, answers_detail)
 
-# Step 4: دالة get_student_results(student_id: UUID) -> list
-# - اجلبي جميع نتائج الطالب من quiz_results:
-#   - results = db.query(QuizResult).filter(QuizResult.student_id == student_id).order_by(QuizResult.taken_at.desc()).all()
-# - حولي لـ list of dicts
-# - ارجعي القائمة
+def submit_answer(db: Session, student_id: UUID, quiz_id: UUID, selected_answer: str) -> dict:
+    """Submit an answer for a single quiz question, save result, return result dict."""
+    try:
+        quiz = db.query(Quiz).filter(Quiz.id == quiz_id).first()
+        if not quiz:
+            raise Exception("الاختبار غير موجود")
 
-# --- Dependencies ---
-# - app/database.py (SessionLocal)
-# - app/models/quiz.py (Quiz model)
-# - app/models/quiz_result.py (QuizResult model)
-# - app/utils/helpers.py (generate_uuid, get_current_timestamp)
+        is_correct = selected_answer.strip() == quiz.correct_answer.strip()
 
-# --- Notes ---
-# - الأسئلة تتعشوأ عشان ما يحفظ الطالب الترتيب
-# - calculate_score ترجع النسبة المئوية + تفاصيل كل إجابة
-# - answers_detail يساعد الطالب يعرف وش غلط فيه
-# - لا ترجعي correct_answer في get_quizzes_for_lesson (قبل التسليم)
-# - بعد التسليم، QuizResultResponse يعرض التفاصيل كاملة
+        result = QuizResult(
+            student_id=student_id,
+            quiz_id=quiz_id,
+            selected_answer=selected_answer,
+            is_correct=is_correct,
+        )
+        db.add(result)
+        db.commit()
+        db.refresh(result)
+
+        return {
+            "id": str(result.id),
+            "quiz_id": str(result.quiz_id),
+            "selected_answer": result.selected_answer,
+            "is_correct": result.is_correct,
+            "correct_answer": quiz.correct_answer,
+            "answered_at": str(result.answered_at),
+        }
+    except Exception as e:
+        db.rollback()
+        raise Exception(f"خطأ في تسليم الإجابة: {str(e)}")
+
+
+def get_student_results(db: Session, student_id: UUID) -> list:
+    """Get all quiz results for a student, ordered by most recent first."""
+    try:
+        results = (
+            db.query(QuizResult)
+            .filter(QuizResult.student_id == student_id)
+            .order_by(QuizResult.answered_at.desc())
+            .all()
+        )
+        output = []
+        for r in results:
+            output.append({
+                "id": str(r.id),
+                "quiz_id": str(r.quiz_id),
+                "selected_answer": r.selected_answer,
+                "is_correct": r.is_correct,
+                "answered_at": str(r.answered_at),
+            })
+        return output
+    except Exception as e:
+        raise Exception(f"خطأ في جلب نتائج الطالب: {str(e)}")
+
+
+def get_random_questions(db: Session, lesson_id: UUID, count: int = 5) -> list:
+    """Get random quiz questions for a lesson with shuffled options.
+    Uses random.sample to pick up to `count` questions, then shuffles each question's options.
+    """
+    try:
+        quizzes = db.query(Quiz).filter(Quiz.lesson_id == lesson_id).all()
+
+        if not quizzes:
+            return []
+
+        # Pick random subset (or all if fewer than count)
+        selected = random.sample(quizzes, min(count, len(quizzes)))
+
+        result = []
+        for q in selected:
+            # Shuffle options for each question
+            options = list(q.options) if q.options else []
+            random.shuffle(options)
+
+            result.append({
+                "id": str(q.id),
+                "lesson_id": str(q.lesson_id),
+                "quiz_type": q.quiz_type.value if hasattr(q.quiz_type, "value") else q.quiz_type,
+                "question_text": q.question_text,
+                "options": options,
+                "created_at": str(q.created_at) if q.created_at else None,
+            })
+        return result
+    except Exception as e:
+        raise Exception(f"خطأ في جلب أسئلة عشوائية: {str(e)}")
+
+
+def get_quiz_feedback(score: float) -> str:
+    """Return Arabic motivational feedback based on quiz score percentage."""
+    if score >= 80:
+        return "ممتاز! أحسنتِ في الإجابة"
+    elif score >= 60:
+        return "جيد! يمكنكِ التحسين أكثر"
+    else:
+        return "لا بأس! حاولي مرة أخرى"

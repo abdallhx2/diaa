@@ -1,65 +1,145 @@
-# ============================================================
-# File: services/tts_service.py
-# Purpose: خدمة تحويل النص إلى صوت — Azure Speech Service للنص العربي
-# Owner: ريناد — TTS Engineer
-# Branch: feature/ai-tts
-# Week: Week 1-2 — بناء محرك TTS للنص العربي
-# ============================================================
+import hashlib
+import os
+import io
+import wave
+import json
+import base64
+import tempfile
+import httpx
+from app.config import settings
+from app.services.storage_service import (
+    get_download_url,
+    get_cached_audio,
+    upload_audio,
+)
 
-# --- Required Imports ---
-# import azure.cognitiveservices.speech as speechsdk
-# import hashlib
-# from app.config import settings
-# from app.services.storage_service import upload_audio, get_file_url
 
-# --- Implementation Steps ---
+def _get_cache_key(text: str) -> str:
+    """Generate an MD5 hash string from the given text, used as cache key."""
+    return hashlib.md5(text.encode("utf-8")).hexdigest()
 
-# Step 1: تهيئة Azure Speech SDK
-# - speech_config = speechsdk.SpeechConfig(
-#       subscription=settings.AZURE_SPEECH_KEY,
-#       region=settings.AZURE_SPEECH_REGION
-#   )
-# - اختاري الصوت العربي:
-#   - speech_config.speech_synthesis_voice_name = "ar-SA-HamedNeural"    — صوت ذكر
-#   - أو: speech_config.speech_synthesis_voice_name = "ar-SA-ZariyahNeural"  — صوت أنثى
-# - حددي صيغة الصوت:
-#   - speech_config.set_speech_synthesis_output_format(speechsdk.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3)
 
-# Step 2: دالة text_to_speech(text: str) -> str
-# - تحققي إن النص مو فاضي
-# - تحققي من الكاش أولاً (Step 3)
-# - لو مو موجود في الكاش:
-#   - أنشئي synthesizer:
-#     - synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=None)
-#   - ولدي الصوت:
-#     - result = synthesizer.speak_text_async(text).get()
-#   - تحققي من النتيجة:
-#     - if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted: نجاح
-#     - else: فشل — ارمي Exception
-#   - خذي البيانات الصوتية:
-#     - audio_bytes = result.audio_data
-#   - ارفعي على Firebase Storage:
-#     - filename = f"{text_hash}.mp3"
-#     - audio_url = upload_audio(audio_bytes, filename)
-#   - ارجعي audio_url
+def _generate_audio_via_openrouter(text: str) -> bytes:
+    """Generate speech audio via OpenRouter gpt-audio-mini streaming.
+    Returns WAV bytes.
+    """
+    audio_chunks = []
 
-# Step 3: آلية التخزين المؤقت (Caching)
-# - احسبي hash للنص:
-#   - text_hash = hashlib.md5(text.encode('utf-8')).hexdigest()
-# - تحققي لو الملف موجود في Firebase Storage:
-#   - existing_url = get_file_url(f"audio/{text_hash}.mp3")
-#   - لو موجود — ارجعيه مباشرة بدون توليد جديد
-# - هذا يوفر استهلاك Azure API ويسرع الاستجابة
+    with httpx.stream(
+        "POST",
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+            "HTTP-Referer": "https://edu-smart.app",
+            "X-Title": "Edu Smart Assistant",
+            "Content-Type": "application/json",
+        },
+        json={
+            "model": settings.TTS_MODEL,
+            "modalities": ["text", "audio"],
+            "audio": {"voice": settings.TTS_VOICE, "format": "pcm16"},
+            "messages": [
+                {
+                    "role": "user",
+                    "content": f"اقرأ النص التالي بصوت واضح بالعربية:\n{text}",
+                }
+            ],
+            "stream": True,
+        },
+        timeout=30,
+    ) as response:
+        for line in response.iter_lines():
+            if line.startswith("data: ") and "DONE" not in line:
+                try:
+                    chunk = json.loads(line[6:])
+                    choices = chunk.get("choices", [])
+                    if choices:
+                        delta = choices[0].get("delta", {})
+                        audio = delta.get("audio", {})
+                        if audio and audio.get("data"):
+                            audio_chunks.append(audio["data"])
+                except (json.JSONDecodeError, KeyError, IndexError):
+                    pass
 
-# --- Dependencies ---
-# - app/config.py (settings — Azure keys)
-# - app/services/storage_service.py (upload_audio, get_file_url)
-# - azure-cognitiveservices-speech library
+    if not audio_chunks:
+        raise Exception("لم يتم إنشاء صوت — لا توجد بيانات صوتية")
 
-# --- Notes ---
-# - Azure Speech Service يدعم عدة أصوات عربية سعودية
-# - HamedNeural: صوت ذكر، طبيعي ومناسب للأطفال
-# - ZariyahNeural: صوت أنثى، واضح ومريح
-# - الكاش يعتمد على MD5 hash للنص — نفس النص = نفس الصوت
-# - ارفعي الملفات الصوتية في مجلد audio/ في Firebase Storage
-# - استخدمي try/except عشان تعاملين أخطاء Azure بشكل مناسب
+    # Decode base64 PCM16 chunks
+    full_b64 = "".join(audio_chunks)
+    pcm_data = base64.b64decode(full_b64)
+
+    # Convert PCM16 to WAV (24kHz mono 16-bit)
+    wav_buf = io.BytesIO()
+    with wave.open(wav_buf, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(24000)
+        wf.writeframes(pcm_data)
+
+    return wav_buf.getvalue()
+
+
+def convert_to_speech(text: str) -> str:
+    """Convert Arabic text to speech via OpenRouter audio model.
+    Flow: cache check → OpenRouter TTS → Firebase upload → cache store → return URL.
+    """
+    if not text or not text.strip():
+        raise ValueError("النص مطلوب لتحويله إلى صوت")
+
+    if settings.MOCK_AI:
+        from app.services.mock_services import MockTTS
+        return MockTTS.convert(text)
+
+    temp_path = None
+    try:
+        cache_key = _get_cache_key(text)
+
+        # Check in-memory cache first
+        cached_url = get_cached_audio(cache_key)
+        if cached_url:
+            return cached_url
+
+        # Check Firebase Storage
+        storage_path = f"audio/{cache_key}.wav"
+        existing_url = get_download_url(storage_path)
+        if existing_url:
+            return existing_url
+
+        # Generate speech via OpenRouter
+        wav_bytes = _generate_audio_via_openrouter(text)
+
+        # Write to temp file, then upload
+        fd, temp_path = tempfile.mkstemp(suffix=".wav")
+        os.close(fd)
+        with open(temp_path, "wb") as f:
+            f.write(wav_bytes)
+
+        audio_url = upload_audio(temp_path, cache_key)
+        return audio_url
+
+    except ValueError:
+        raise
+    except Exception as e:
+        raise Exception(f"خطأ في خدمة تحويل النص إلى صوت: {str(e)}")
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
+
+
+def convert_to_speech_fallback(text: str) -> dict:
+    """Safe version of convert_to_speech — never raises.
+    Returns dict with has_audio flag and optional url.
+    """
+    try:
+        url = convert_to_speech(text)
+        return {"has_audio": True, "url": url}
+    except Exception:
+        return {"has_audio": False, "url": None}
+
+
+def generate_speech(text: str) -> str:
+    """Alias for convert_to_speech — kept for backward compatibility."""
+    return convert_to_speech(text)

@@ -14,3 +14,15 @@ program/admin/.next/
 program/mobile/.dart_tool/
 program/mobile/.packages
 program/mobile/build/
+
+# Windows reserved name (do not track)
+nul
+
+# Secrets — never commit
+program/backend/firebase-credentials.json
+program/backend/*-credentials.json
+program/backend/service-account*.json
+
+# JVM crash dumps
+program/hs_err_pid*.log
+program/replay_pid*.log

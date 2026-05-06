@@ -1,65 +1,71 @@
-// ============================================================
-// File: parent_model.dart
-// Purpose: نموذج ولي الأمر — بيانات ولي الأمر وقائمة أطفاله
-// Owner: ديمة — Flutter Lead
-// Branch: feature/flutter-student
-// Week: 1 — إعداد البنية الأساسية للتطبيق
-// ============================================================
+import 'package:edu_smart_assistant/models/student_model.dart';
 
-// --- Required Imports ---
-// import 'package:edu_smart_assistant/models/student_model.dart';
+class ParentModel {
+  final String id;
+  final String userId;
+  final String name;
+  final String email;
+  final String phone;
+  final List<StudentModel> children;
+  final DateTime? createdAt;
 
-// --- Implementation Steps ---
-// Step 1: إنشاء class ParentModel
-//         - class ParentModel { ... }
+  const ParentModel({
+    required this.id,
+    required this.userId,
+    required this.name,
+    required this.email,
+    this.phone = '',
+    this.children = const [],
+    this.createdAt,
+  });
 
-// Step 2: تعريف الحقول (Fields)
-//         - final String id;                      // معرف ولي الأمر
-//         - final String userId;                   // معرف المستخدم المرتبط
-//         - final String name;                     // اسم ولي الأمر
-//         - final String email;                    // البريد الإلكتروني
-//         - final String phone;                    // رقم الهاتف
-//         - final int numChildren;                 // عدد الأطفال المسجلين
-//         - final List<StudentModel> children;     // قائمة الأطفال
+  /// عدد الأطفال — محسوب من القائمة بدلاً من حقل منفصل
+  int get numChildren => children.length;
 
-// Step 3: إنشاء Constructor
-//         - ParentModel({
-//             required this.id,
-//             required this.userId,
-//             required this.name,
-//             required this.email,
-//             this.phone = '',
-//             this.numChildren = 0,
-//             this.children = const [],
-//           });
+  factory ParentModel.fromJson(Map<String, dynamic> json) {
+    return ParentModel(
+      id: json['id']?.toString() ?? '',
+      userId: json['user_id']?.toString() ?? '',
+      name: json['name'] ?? '',
+      email: json['email'] ?? '',
+      phone: json['phone'] ?? '',
+      children: (json['children'] as List<dynamic>?)
+              ?.map((e) => StudentModel.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : null,
+    );
+  }
 
-// Step 4: إنشاء factory fromJson(Map<String, dynamic> json)
-//         - factory ParentModel.fromJson(Map<String, dynamic> json) {
-//             return ParentModel(
-//               id: json['id'] ?? '',
-//               userId: json['user_id'] ?? '',
-//               name: json['name'] ?? '',
-//               email: json['email'] ?? '',
-//               phone: json['phone'] ?? '',
-//               numChildren: json['num_children'] ?? 0,
-//               children: (json['children'] as List<dynamic>?)
-//                   ?.map((e) => StudentModel.fromJson(e))
-//                   .toList() ?? [],
-//             );
-//           }
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'user_id': userId,
+        'name': name,
+        'email': email,
+        'phone': phone,
+        'children': children.map((e) => e.toJson()).toList(),
+        'created_at': createdAt?.toIso8601String(),
+      };
 
-// Step 5: إنشاء toJson() method
-//         - Map<String, dynamic> toJson() => {
-//             'id': id,
-//             'user_id': userId,
-//             'name': name,
-//             'email': email,
-//             'phone': phone,
-//             'num_children': numChildren,
-//             'children': children.map((e) => e.toJson()).toList(),
-//           };
-
-// --- Notes ---
-// - children تحتوي على قائمة StudentModel لكل طفل مسجل
-// - numChildren يمكن أن يختلف عن children.length إذا لم يتم تحميل كل الأطفال
-// - يعتمد على StudentModel — تأكد من import الصحيح
+  ParentModel copyWith({
+    String? id,
+    String? userId,
+    String? name,
+    String? email,
+    String? phone,
+    List<StudentModel>? children,
+    DateTime? createdAt,
+  }) {
+    return ParentModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      children: children ?? this.children,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+}

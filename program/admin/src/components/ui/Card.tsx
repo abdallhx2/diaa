@@ -1,40 +1,48 @@
-// ============================================================
-// File: Card.tsx
-// Purpose: مكون البطاقة - لعرض المحتوى في إطار مُنسق
-// Owner: جود2 — Admin Developer
-// Branch: feature/admin-content
-// Week: 1 — بناء مكونات UI الأساسية
-// ============================================================
+import React from 'react';
 
-// --- Required Imports ---
-// import { LucideIcon } from 'lucide-react';  // نوع الأيقونة
+interface CardProps {
+  title?: string;
+  headerAction?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}
 
-// --- Implementation Steps ---
-// Step 1: تعريف Props
-//   - interface CardProps {
-//       children: React.ReactNode;
-//       title?: string;
-//       className?: string;
-//       icon?: LucideIcon;    // أيقونة اختيارية بجانب العنوان
-//     }
-
-// Step 2: بناء المكون
-//   - <div className={`bg-white rounded-lg shadow-md p-6 ${className}`}>
-//     - إذا كان هناك عنوان:
-//       <div className="flex items-center gap-2 mb-4">
-//         {icon && <Icon className="h-5 w-5 text-primary-600" />}
-//         <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
-//       </div>
-//     - {children}
-//   - </div>
-
-// Step 3: التصدير
-//   - export default function Card({ children, title, className = '', icon: Icon }: CardProps)
-
-// --- Notes ---
-// - البطاقة بسيطة ومرنة — تُستخدم في Dashboard stats, forms, sections
-// - shadow-md يعطي ظل متوسط — يمكن تغييره حسب الاستخدام
-// - rounded-lg للزوايا المدورة
-// - className prop يسمح بتخصيص إضافي من الخارج
-// - الأيقونة اختيارية — تُعرض فقط إذا مُررت
-// - يمكن إضافة prop footer لمحتوى أسفل البطاقة (مستقبلي)
+export default function Card({ title, headerAction, children, className }: CardProps) {
+  return (
+    <div
+      className={className}
+      style={{
+        background: '#ffffff',
+        borderRadius: '14px',
+        boxShadow: '0 2px 16px rgba(90,46,154,0.09)',
+        overflow: 'hidden',
+      }}
+    >
+      {title && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '16px 20px',
+            borderBottom: '1px solid #DDD6EE',
+          }}
+        >
+          <h3
+            style={{
+              fontSize: '0.92rem',
+              fontWeight: 800,
+              color: '#2E1A50',
+              margin: 0,
+              fontFamily: 'Tajawal, sans-serif',
+            }}
+          >
+            {title}
+          </h3>
+          {headerAction && <div>{headerAction}</div>}
+        </div>
+      )}
+      <div>{children}</div>
+    </div>
+  );
+}

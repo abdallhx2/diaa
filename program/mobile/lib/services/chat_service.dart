@@ -1,44 +1,46 @@
 import 'package:edu_smart_assistant/services/api_service.dart';
 import 'package:edu_smart_assistant/models/chat_message_model.dart';
-import 'package:dio/dio.dart';
 
 class ChatService {
-// Step 1: الاتصال بـ ApiService
-final ApiService _apiService = ApiService();
+  final ApiService _apiService = ApiService();
 
-// Step 2: إرسال سؤال للـ AI
-Future<Map<String, dynamic>> askQuestion(
-String question, String lessonId) async {
-try {
-Response response = await _apiService.post('/chat/ask', data: {
-'question': question,
-'lesson_id': lessonId,
-});
+  /// إرسال سؤال للمساعد الذكي
+  Future<Map<String, dynamic>> askQuestion(
+      String question, String lessonId) async {
+    try {
+      final response = await _apiService.post('/chat/ask', data: {
+        'question': question,
+        'lesson_id': lessonId.isEmpty ? null : lessonId,
+      });
 
-return {
-'answer': response.data['answer'],
-'audio_url': response.data['audio_url'],
-};
+      final data = response.data;
+      if (data['success'] == true) {
+        return data['data'] as Map<String, dynamic>;
+      }
+      throw Exception(data['message'] ?? 'فشل في إرسال السؤال');
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('فشل في الاتصال بالمساعد الذكي');
+    }
+  }
 
-} catch (e) {
-throw Exception('حدث خطأ في إرسال السؤال، حاول مرة أخرى');
-}
-}
+  /// جلب تاريخ المحادثة لدرس معين
+  /// Backend يعيد: { messages: [...] }
+  Future<List<ChatMessageModel>> getHistory(String lessonId) async {
+    if (lessonId.isEmpty) return [];
+    try {
+      final response = await _apiService.get('/chat/history/$lessonId');
 
-// Step 3: جلب تاريخ المحادثة
-Future<List<ChatMessageModel>> getHistory(String lessonId) async {
-try {
-Response response =
-await _apiService.get('/chat/history/$lessonId');
-
-List<ChatMessageModel> messages = (response.data as List)
-.map((e) => ChatMessageModel.fromJson(e))
-.toList();
-
-return messages;
-
-} catch (e) {
-throw Exception('حدث خطأ في جلب المحادثات');
-}
-}
+      final data = response.data;
+      if (data['success'] == true) {
+        final messages = data['data']['messages'] as List<dynamic>? ?? [];
+        return messages
+            .map((e) => ChatMessageModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
 }

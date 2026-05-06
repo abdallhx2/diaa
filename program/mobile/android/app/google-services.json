@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "927326149647",
+    "project_id": "diaa-fc2d3",
+    "storage_bucket": "diaa-fc2d3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:927326149647:android:5e0d54102ae022165e177a",
+        "android_client_info": {
+          "package_name": "com.edusmart.assistant"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJvzmUnkQdfyaIUdueMboIR_YsoBlxpM8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

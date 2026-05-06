@@ -1,49 +1,55 @@
-// ============================================================
-// File: constants.dart
-// Purpose: ثوابت التطبيق — روابط API، أحجام، إعدادات عامة
-// Owner: ديمة — Flutter Lead
-// Branch: feature/flutter-student
-// Week: 1 — إعداد البنية الأساسية للتطبيق
-// ============================================================
+class AppConstants {
+  AppConstants._();
 
-// --- Required Imports ---
-// (لا يحتاج imports خارجية)
+  // معلومات التطبيق
+  static const String appName = 'Diyaa';
+  static const String appNameAr = 'ضياء';
+  static const String appTagline = 'رفيق التعلم الذكي';
 
-// --- Implementation Steps ---
-// Step 1: إنشاء class AppConstants مع قيم ثابتة static const
-//         - class AppConstants { ... }
+  // رابط الـ API
+  // للمحاكي Android: http://10.0.2.2:8000/api
+  // لجهاز حقيقي: http://YOUR_IP:8000/api
+  // للإنتاج: https://your-app.railway.app/api
+  static const String apiBaseUrl = 'http://178.105.109.153:8001/api';
+  // Development — Chrome/Web testing
+  static const String webBaseUrl = 'http://178.105.109.153:8001/api';
 
-// Step 2: تعريف ثوابت الـ API
-//         - static const String appName = 'Edu Smart Assistant';
-//         - static const String appNameAr = 'المساعد التعليمي الذكي';
-//         - static const String apiBaseUrl = 'http://localhost:8000/api';  // للتطوير
-//         // في الإنتاج: 'https://your-domain.com/api'
+  // توكنات تجريبية للوضع التجريبي (Mock Mode)
+  // يجب أن تكون ASCII فقط — المتصفح يرفض الأحرف العربية في HTTP headers
+  static const String mockStudentToken = 'mock_student_demo';
+  static const String mockParentToken = 'mock_parent_demo';
 
-// Step 3: تعريف ثوابت الملفات
-//         - static const int imageMaxSizeMB = 10;          // أقصى حجم صورة 10 ميغابايت
-//         - static const int imageMaxSizeBytes = 10 * 1024 * 1024;
+  // ثوابت الملفات
+  static const int maxImageSizeMB = 10;
+  static const int maxImageSizeBytes = 10 * 1024 * 1024;
 
-// Step 4: تعريف ثوابت المحادثة
-//         - static const int maxChatMessages = 20;         // أقصى عدد رسائل في الجلسة
+  // ثوابت المحادثة
+  static const int maxChatMessages = 20;
 
-// Step 5: تعريف ثوابت الاختبارات
-//         - static const int quizQuestionsPerSession = 5;  // 5 أسئلة لكل اختبار
+  // ثوابت الاختبارات
+  static const int quizQuestionsPerSession = 5;
 
-// Step 6: تعريف ثوابت التصميم
-//         - static const double minButtonSize = 48.0;      // أقل ارتفاع زر 48dp
-//         - static const double iconSizeLarge = 64.0;      // أيقونات كبيرة للأطفال
-//         - static const double borderRadius = 12.0;       // حدود مستديرة
-//         - static const double cardBorderRadius = 16.0;
+  // ثوابت التصميم
+  static const double minButtonSize = 48.0;
+  static const double iconSizeLarge = 64.0;
+  static const double borderRadius = 18.0;
+  static const double cardBorderRadius = 18.0;
+  static const double borderRadiusSm = 12.0;
 
-// Step 7: تعريف ثوابت الـ Timeout
-//         - static const int apiTimeoutSeconds = 30;       // مهلة الاتصال 30 ثانية
+  // ثوابت الـ Timeout
+  static const int apiTimeoutSeconds = 30;
 
-// Step 8: تعريف ثوابت المسارات في Firebase Storage
-//         - static const String storageImagesPath = 'images/';
-//         - static const String storageAudioPath = 'audio/';
+  // مسارات Firebase Storage
+  static const String storageImagesPath = 'images/';
+  static const String storageAudioPath = 'audio/';
 
-// --- Notes ---
-// - في الإنتاج، يجب تغيير apiBaseUrl للرابط الفعلي
-// - يمكن استخدام .env file لتخزين المتغيرات الحساسة
-// - الثوابت تساعد في تجنب الـ magic numbers في الكود
-// - يمكن إضافة ثوابت جديدة حسب الحاجة
+  // الصفوف الدراسية المدعومة
+  static const List<String> supportedGrades = [
+    'الأول',
+    'الثاني',
+    'الثالث',
+    'الرابع',
+    'الخامس',
+    'السادس',
+  ];
+}

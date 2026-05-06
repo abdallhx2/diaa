@@ -1,0 +1,13 @@
+{
+  "language": "ar",
+  "available_content": [
+    "لغة عربية",
+    "رياضيات",
+    "علوم"
+  ],
+  "notifications": {
+    "email_notifications": true,
+    "push_notifications": true,
+    "parent_weekly_report": true
+  }
+}

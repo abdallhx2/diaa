@@ -7,10 +7,9 @@ Run: python test_connections.py
 ============================================================
 """
 
-import asyncio
 import sys
 
-# ألوان الطباعة
+# ��لوان الطباعة
 GREEN = "\033[92m"
 RED = "\033[91m"
 YELLOW = "\033[93m"
@@ -68,7 +67,7 @@ def test_firebase():
     header("2. Firebase Admin SDK")
     try:
         import firebase_admin
-        from firebase_admin import credentials, auth
+        from firebase_admin import credentials
         import os
         from dotenv import load_dotenv
         load_dotenv()
@@ -94,73 +93,140 @@ def test_firebase():
 
 
 # ─────────────────────────────────────────────
-# 3. اختبار EasyOCR
+# 3. اختبار OpenRouter — Chat (المحادثة الذكية)
 # ─────────────────────────────────────────────
-def test_easyocr():
-    header("3. EasyOCR (استخراج النص)")
+def test_openrouter_chat():
+    header("3. OpenRouter Chat (المحادثة الذكية)")
     try:
-        import easyocr
-        reader = easyocr.Reader(['ar'], gpu=False, verbose=False)
-        ok("EasyOCR جاهز (اللغة العربية)")
-        return True
-    except Exception as e:
-        fail("فشل تحميل EasyOCR", str(e))
-        return False
-
-
-# ─────────────────────────────────────────────
-# 4. اختبار Azure TTS
-# ─────────────────────────────────────────────
-def test_azure_tts():
-    header("4. Azure TTS (تحويل النص لصوت)")
-    try:
-        import azure.cognitiveservices.speech as speechsdk
+        from openai import OpenAI
         import os
         from dotenv import load_dotenv
         load_dotenv()
 
-        key = os.getenv("AZURE_SPEECH_KEY")
-        region = os.getenv("AZURE_SPEECH_REGION")
-
-        if not key or not region:
-            fail("AZURE_SPEECH_KEY أو AZURE_SPEECH_REGION غير موجود في .env")
-            return False
-
-        config = speechsdk.SpeechConfig(subscription=key, region=region)
-        config.speech_synthesis_voice_name = "ar-SA-HamedNeural"
-        ok(f"Azure TTS مُعد (المنطقة: {region})")
-        return True
-    except Exception as e:
-        fail("فشل إعداد Azure TTS", str(e))
-        return False
-
-
-# ─────────────────────────────────────────────
-# 5. اختبار Gemini
-# ─────────────────────────────────────────────
-def test_gemini():
-    header("5. Gemini AI (الدردشة الذكية)")
-    try:
-        from google import genai
-        import os
-        from dotenv import load_dotenv
-        load_dotenv()
-
-        api_key = os.getenv("GEMINI_API_KEY")
+        api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
-            fail("GEMINI_API_KEY غير موجود في .env")
+            fail("OPENROUTER_API_KEY غير موجود في .env")
             return False
 
-        client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
-            model="gemini-flash-latest",
-            contents="قل: مرحبا"
+        model = os.getenv("CHAT_MODEL", "openai/gpt-4o-mini")
+
+        client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=api_key,
         )
-        ok(f"Gemini يعمل — الرد: {response.text}")
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": "قل: مرحبا"}],
+            max_tokens=10,
+        )
+        answer = response.choices[0].message.content
+        ok(f"Chat يعمل (النموذج: {model}) — الرد: {answer}")
         return True
     except Exception as e:
-        fail("فشل الاتصال بـ Gemini", str(e))
+        fail("فشل الاتصال بـ OpenRouter Chat", str(e))
         return False
+
+
+# ─────────────────────────────────────────────
+# 4. اختبار OpenRouter — Vision/OCR (استخراج النص)
+# ─────────────────────────────────────────────
+def test_openrouter_vision():
+    header("4. OpenRouter Vision/OCR (استخراج النص)")
+    try:
+        from openai import OpenAI
+        import os
+        from dotenv import load_dotenv
+        load_dotenv()
+
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            fail("OPENROUTER_API_KEY غير موجود في .env")
+            return False
+
+        model = os.getenv("VISION_MODEL", "openai/gpt-4o-mini")
+
+        client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=api_key,
+        )
+
+        # Test with a simple text description (no actual image needed for connectivity test)
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": "قل: اختبار"}],
+            max_tokens=10,
+        )
+        ok(f"Vision model متاح (النموذج: {model})")
+        return True
+    except Exception as e:
+        fail("فشل الاتصال بـ OpenRouter Vision", str(e))
+        return False
+
+
+# ─────────────────────────────────────────────
+# 5. اختبار OpenRouter — TTS (تحويل النص لصوت)
+# ─────────────────────────────────────────────
+def test_openrouter_tts():
+    header("5. OpenRouter TTS (تحويل النص لصوت)")
+    try:
+        import httpx
+        import json
+        import base64
+        import os
+        from dotenv import load_dotenv
+        load_dotenv()
+
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            fail("OPENROUTER_API_KEY غير موجود في .env")
+            return False
+
+        model = os.getenv("TTS_MODEL", "openai/gpt-audio-mini")
+        voice = os.getenv("TTS_VOICE", "alloy")
+
+        audio_chunks = []
+        with httpx.stream(
+            "POST",
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "HTTP-Referer": "https://edu-smart.app",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": model,
+                "modalities": ["text", "audio"],
+                "audio": {"voice": voice, "format": "pcm16"},
+                "messages": [{"role": "user", "content": "Say: hello"}],
+                "stream": True,
+            },
+            timeout=30,
+        ) as response:
+            for line in response.iter_lines():
+                if line.startswith("data: ") and "DONE" not in line:
+                    try:
+                        chunk = json.loads(line[6:])
+                        choices = chunk.get("choices", [])
+                        if choices:
+                            delta = choices[0].get("delta", {})
+                            audio = delta.get("audio", {})
+                            if audio and audio.get("data"):
+                                audio_chunks.append(audio["data"])
+                    except (json.JSONDecodeError, KeyError):
+                        pass
+
+        if audio_chunks:
+            full_b64 = "".join(audio_chunks)
+            audio_bytes = base64.b64decode(full_b64)
+            ok(f"TTS يعمل (النموذج: {model}, الصوت: {voice}) — {len(audio_bytes)} bytes")
+            return True
+        else:
+            fail("TTS لم يرجع بيانات صوتية")
+            return False
+    except Exception as e:
+        fail("فشل الاتصال بـ OpenRouter TTS", str(e))
+        return False
+
 
 # ─────────────────────────────────────────────
 # 6. اختبار FastAPI Server
@@ -191,9 +257,9 @@ if __name__ == "__main__":
     results = {}
     results["PostgreSQL"] = test_postgresql()
     results["Firebase"] = test_firebase()
-    results["EasyOCR"] = test_easyocr()
-    results["Azure TTS"] = test_azure_tts()
-    results["Gemini"] = test_gemini()
+    results["OpenRouter Chat"] = test_openrouter_chat()
+    results["OpenRouter Vision"] = test_openrouter_vision()
+    results["OpenRouter TTS"] = test_openrouter_tts()
     results["FastAPI"] = test_fastapi()
 
     # ─── الملخص ───

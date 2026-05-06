@@ -1,44 +1,37 @@
-// ============================================================
-// File: Badge.tsx
-// Purpose: مكون الشارة - لعرض الحالات والأدوار بألوان مميزة
-// Owner: جود2 — Admin Developer
-// Branch: feature/admin-content
-// Week: 1 — بناء مكونات UI الأساسية
-// ============================================================
+import React from 'react';
 
-// --- Required Imports ---
-// (لا يحتاج imports خارجية)
+interface BadgeProps {
+  variant: 'purple' | 'green' | 'blue' | 'amber' | 'red';
+  children: React.ReactNode;
+}
 
-// --- Implementation Steps ---
-// Step 1: تعريف Props
-//   - interface BadgeProps {
-//       text: string;
-//       variant?: 'success' | 'warning' | 'danger' | 'info';
-//     }
+const colorMap: Record<BadgeProps['variant'], { bg: string; text: string }> = {
+  purple: { bg: 'rgba(124,77,188,0.12)', text: '#7C4DBC' },
+  green: { bg: 'rgba(62,189,133,0.12)', text: '#3EBD85' },
+  blue: { bg: 'rgba(74,143,224,0.12)', text: '#4A8FE0' },
+  amber: { bg: 'rgba(240,165,0,0.12)', text: '#F0A500' },
+  red: { bg: 'rgba(226,86,86,0.12)', text: '#E25656' },
+};
 
-// Step 2: تعريف أنماط الألوان لكل variant
-//   - const variants = {
-//       success: 'bg-green-100 text-green-700',    // نشط، طالب
-//       warning: 'bg-yellow-100 text-yellow-700',   // ولي أمر، معلق
-//       danger: 'bg-red-100 text-red-700',           // معطل، خطأ
-//       info: 'bg-blue-100 text-blue-700',           // مسؤول، معلومة
-//     };
+export default function Badge({ variant, children }: BadgeProps) {
+  const colors = colorMap[variant];
 
-// Step 3: بناء المكون
-//   - <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${variants[variant]}`}>
-//       {text}
-//     </span>
-
-// Step 4: التصدير
-//   - export default function Badge({ text, variant = 'info' }: BadgeProps)
-
-// --- Notes ---
-// - rounded-full يعطي شكل الحبة (pill shape)
-// - text-xs font-medium لحجم صغير وواضح
-// - تُستخدم في: أدوار المستخدمين، حالة الحساب، أنواع الاختبارات
-// - أمثلة الاستخدام:
-//   - <Badge text="مسؤول" variant="info" />
-//   - <Badge text="نشط" variant="success" />
-//   - <Badge text="معطل" variant="danger" />
-//   - <Badge text="ولي أمر" variant="warning" />
-// - يمكن إضافة أيقونة نقطة ملونة بجانب النص مستقبلاً
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: '3px 9px',
+        borderRadius: '20px',
+        fontSize: '0.72rem',
+        fontWeight: 700,
+        whiteSpace: 'nowrap',
+        background: colors.bg,
+        color: colors.text,
+        fontFamily: 'Tajawal, sans-serif',
+      }}
+    >
+      {children}
+    </span>
+  );
+}

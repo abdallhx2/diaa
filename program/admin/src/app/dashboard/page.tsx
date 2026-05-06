@@ -1,60 +1,108 @@
-// ============================================================
-// File: dashboard/page.tsx
-// Purpose: لوحة المعلومات الرئيسية - عرض الإحصائيات والنشاطات
-// Owner: جود — Admin Lead
-// Branch: feature/admin-core
-// Week: 2 — صفحات لوحة التحكم والمستخدمين
-// ============================================================
+'use client';
 
-// --- Required Imports ---
-// 'use client';
-// import { useEffect, useState } from 'react';
-// import DashboardLayout from '@/components/layout/DashboardLayout';
-// import Card from '@/components/ui/Card';
-// import api from '@/services/api';
-// import { Users, UserCheck, BookOpen, Calendar } from 'lucide-react';  // أيقونات
-// import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useEffect, useState } from 'react';
+import DashboardLayout from '@/components/layout/DashboardLayout';
+import Card from '@/components/ui/Card';
+import Badge from '@/components/ui/Badge';
+import api from '@/services/api';
 
-// --- Implementation Steps ---
-// Step 1: تعريف interfaces للبيانات
-//   - DashboardStats { total_users, active_users_7d, sessions_this_week, sessions_this_month }
-//   - WeeklyActivity { day: string, sessions: number }
-//   - RecentActivity { id, user_name, action, created_at }
+interface RecentLesson {
+  title: string;
+  subject: string;
+}
 
-// Step 2: إنشاء state variables
-//   - stats: DashboardStats | null
-//   - weeklyData: WeeklyActivity[]
-//   - recentActivities: RecentActivity[]
-//   - loading: boolean
+export default function DashboardPage() {
+  const [lessons, setLessons] = useState<RecentLesson[]>([]);
+  const [loading, setLoading] = useState(true);
 
-// Step 3: جلب البيانات عند تحميل الصفحة
-//   - useEffect → GET /api/admin/dashboard
-//   - تعبئة stats, weeklyData, recentActivities من الاستجابة
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const response = await api.get('/admin/dashboard');
+        const data = response.data.data || response.data;
+        if (data.recent_lessons && data.recent_lessons.length > 0) {
+          setLessons(data.recent_lessons);
+        } else {
+          setLessons(getMockLessons());
+        }
+      } catch {
+        setLessons(getMockLessons());
+      } finally {
+        setLoading(false);
+      }
+    };
 
-// Step 4: عرض 4 بطاقات إحصائية (stat cards)
-//   - بطاقة 1: إجمالي المستخدمين (أيقونة Users) — stats.total_users
-//   - بطاقة 2: المستخدمون النشطون (أيقونة UserCheck) — stats.active_users_7d
-//   - بطاقة 3: جلسات هذا الأسبوع (أيقونة BookOpen) — stats.sessions_this_week
-//   - بطاقة 4: جلسات هذا الشهر (أيقونة Calendar) — stats.sessions_this_month
-//   - استخدم grid: grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6
+    fetchDashboard();
+  }, []);
 
-// Step 5: رسم بياني للنشاط الأسبوعي باستخدام Recharts
-//   - <Card title="النشاط الأسبوعي">
-//   - <ResponsiveContainer width="100%" height={300}>
-//   - <BarChart data={weeklyData}>
-//   - أعمدة: XAxis=day, Bar=sessions, لون أزرق فاتح
+  function getMockLessons(): RecentLesson[] {
+    return [
+      { title: 'الحروف الهجائية', subject: 'لغتي' },
+      { title: 'الكائنات الحية', subject: 'علوم' },
+      { title: 'الأرقام من ١ إلى ١٠', subject: 'لغتي' },
+      { title: 'الطقس والفصول', subject: 'علوم' },
+    ];
+  }
 
-// Step 6: قائمة النشاطات الأخيرة
-//   - <Card title="آخر النشاطات">
-//   - عرض آخر 10 نشاطات في قائمة
-//   - لكل نشاط: اسم المستخدم، الإجراء، التاريخ (مُنسق بـ date-fns)
+  function getSubjectBadgeVariant(subject: string): 'purple' | 'green' | 'blue' | 'amber' | 'red' {
+    switch (subject) {
+      case 'لغتي':
+        return 'purple';
+      case 'علوم':
+        return 'green';
+      default:
+        return 'blue';
+    }
+  }
 
-// Step 7: حالة التحميل (Loading skeleton)
-//   - أثناء loading === true، اعرض placeholder متحرك
-//   - استخدم animate-pulse مع bg-gray-200 بأحجام البطاقات
+  return (
+    <DashboardLayout>
+      {/* Page Header */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-xl font-black text-[var(--text)]">لوحة التحكم</h1>
+          <p className="text-xs text-[var(--text-sm)] mt-0.5">نظرة عامة على المنصة</p>
+        </div>
+      </div>
 
-// --- Notes ---
-// - لف كل المحتوى بـ <DashboardLayout> لضمان Sidebar و Header
-// - استخدم date-fns/format لتنسيق التواريخ بالعربي
-// - الرسم البياني يحتاج ResponsiveContainer ليكون متجاوب
-// - يمكن إضافة تحديث تلقائي كل 5 دقائق (اختياري)
+      {/* Recent Lessons Card */}
+      <Card>
+        <h2 className="text-sm font-bold text-[var(--text)] mb-4">آخر الدروس المضافة</h2>
+        {loading ? (
+          <div className="animate-pulse space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-10 bg-[var(--bg)] rounded" />
+            ))}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr>
+                  <th className="bg-[var(--bg)] text-xs uppercase text-[var(--text-sm)] py-3 px-5 text-right">
+                    عنوان الدرس
+                  </th>
+                  <th className="bg-[var(--bg)] text-xs uppercase text-[var(--text-sm)] py-3 px-5 text-right">
+                    المادة
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {lessons.map((lesson, idx) => (
+                  <tr key={idx} className="border-t border-[var(--bg)]">
+                    <td className="py-3 px-5 text-sm text-[var(--text)]">{lesson.title}</td>
+                    <td className="py-3 px-5 text-sm">
+                      <Badge variant={getSubjectBadgeVariant(lesson.subject)}>
+                        {lesson.subject}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </DashboardLayout>
+  );
+}

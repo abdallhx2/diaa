@@ -1,48 +1,58 @@
-// ============================================================
-// File: Input.tsx
-// Purpose: مكون حقل الإدخال - يدعم التسمية ورسائل الخطأ
-// Owner: جود2 — Admin Developer
-// Branch: feature/admin-content
-// Week: 1 — بناء مكونات UI الأساسية
-// ============================================================
+'use client';
 
-// --- Required Imports ---
-// import { InputHTMLAttributes, forwardRef } from 'react';
+import React, { useState } from 'react';
 
-// --- Implementation Steps ---
-// Step 1: تعريف Props
-//   - interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-//       label?: string;        // نص التسمية فوق الحقل
-//       error?: string;        // رسالة الخطأ (تظهر تحت الحقل)
-//     }
-//   - استخدم forwardRef لدعم React Hook Form register
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  label?: string;
+}
 
-// Step 2: بناء المكون باستخدام forwardRef
-//   - const Input = forwardRef<HTMLInputElement, InputProps>(({ label, error, className, ...props }, ref) => { ... })
+export default function Input({ label, style, ...props }: InputProps) {
+  const [focused, setFocused] = useState(false);
 
-// Step 3: عرض التسمية (Label)
-//   - {label && <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>}
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    background: focused ? '#ffffff' : '#F4F2F8',
+    border: `1.5px solid ${focused ? '#7C4DBC' : '#DDD6EE'}`,
+    borderRadius: '9px',
+    padding: '10px 13px',
+    fontSize: '0.86rem',
+    fontFamily: 'Tajawal, sans-serif',
+    color: '#2E1A50',
+    direction: 'rtl',
+    outline: 'none',
+    transition: 'all 0.18s',
+    boxSizing: 'border-box',
+    ...style,
+  };
 
-// Step 4: عرض حقل الإدخال
-//   - <input
-//       ref={ref}
-//       className="w-full px-4 py-2 border rounded-lg text-gray-900 placeholder-gray-400
-//                  focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
-//                  transition-colors duration-200
-//                  ${error ? 'border-red-500' : 'border-gray-300'}"
-//       {...props}
-//     />
-
-// Step 5: عرض رسالة الخطأ
-//   - {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
-
-// Step 6: التصدير
-//   - Input.displayName = 'Input';
-//   - export default Input;
-
-// --- Notes ---
-// - forwardRef ضروري لأن React Hook Form يحتاج ref للحقل
-// - الحقل يتحول للون الأحمر عند وجود خطأ (border-red-500)
-// - placeholder-gray-400 لنص الإرشاد الخافت
-// - يمكن إضافة أيقونة داخل الحقل (مثل أيقونة البحث) عبر prop إضافي
-// - تأكد من أن text-align يكون right تلقائياً بسبب dir="rtl" على html
+  return (
+    <div style={{ width: '100%' }}>
+      {label && (
+        <label
+          style={{
+            display: 'block',
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            color: '#2E1A50',
+            marginBottom: '6px',
+            fontFamily: 'Tajawal, sans-serif',
+          }}
+        >
+          {label}
+        </label>
+      )}
+      <input
+        style={inputStyle}
+        onFocus={(e) => {
+          setFocused(true);
+          props.onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          props.onBlur?.(e);
+        }}
+        {...props}
+      />
+    </div>
+  );
+}

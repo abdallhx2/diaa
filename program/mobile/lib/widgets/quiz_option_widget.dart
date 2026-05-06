@@ -1,81 +1,112 @@
-// ============================================================
-// File: quiz_option_widget.dart
-// Purpose: خيار اختبار — بطاقة خيار مع تغيير اللون عند الاختيار والتصحيح
-// Owner: رهف — UI Developer
-// Branch: feature/flutter-parent
-// Week: 2 — ويدجت الاختبارات
-// ============================================================
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:edu_smart_assistant/config/theme.dart';
 
-// --- Required Imports ---
-// import 'package:flutter/material.dart';
-// import 'package:edu_smart_assistant/config/theme.dart';
+class QuizOptionWidget extends StatelessWidget {
+  final String text;
+  final String? letter;
+  final bool isSelected;
+  final bool? isCorrect;
+  final VoidCallback onTap;
 
-// --- Implementation Steps ---
-// Step 1: إنشاء StatelessWidget باسم QuizOptionWidget
-//         - class QuizOptionWidget extends StatelessWidget { ... }
+  const QuizOptionWidget({
+    super.key,
+    required this.text,
+    this.letter,
+    required this.isSelected,
+    this.isCorrect,
+    required this.onTap,
+  });
 
-// Step 2: تعريف الخصائص (Props)
-//         - final String text;             // نص الخيار بالعربي
-//         - final bool isSelected;          // هل تم اختياره؟
-//         - final bool? isCorrect;          // هل صحيح؟ (null = لم يُجب بعد)
-//         - final VoidCallback onTap;       // دالة عند الضغط
+  Color get _borderColor {
+    if (!isSelected) return AppTheme.bg200;
+    if (isCorrect == null) return AppTheme.primary200;
+    if (isCorrect == true) return AppTheme.successColor;
+    return AppTheme.errorColor;
+  }
 
-// Step 3: إنشاء Constructor
-//         - const QuizOptionWidget({
-//             required this.text,
-//             required this.isSelected,
-//             this.isCorrect,
-//             required this.onTap,
-//           });
+  Color get _backgroundColor {
+    if (isCorrect == true && isSelected) {
+      return AppTheme.successColor.withValues(alpha: 0.1);
+    }
+    if (isCorrect == false && isSelected) {
+      return AppTheme.errorColor.withValues(alpha: 0.1);
+    }
+    if (isSelected) return AppTheme.primary200.withValues(alpha: 0.1);
+    return Colors.white;
+  }
 
-// Step 4: تحديد لون الحدود حسب الحالة
-//         - Color borderColor:
-//           * إذا لم يُختار (isSelected = false): Colors.grey[300]
-//           * إذا اختير ولم يُصحح (isCorrect = null): AppTheme.primaryBlue (أزرق)
-//           * إذا اختير وصحيح (isCorrect = true): AppTheme.successColor (أخضر)
-//           * إذا اختير وخطأ (isCorrect = false): AppTheme.errorColor (أحمر)
+  Widget get _icon {
+    if (isCorrect == true) {
+      return const Icon(Icons.check_circle, color: AppTheme.successColor, size: 24);
+    }
+    if (isCorrect == false && isSelected) {
+      return const Icon(Icons.cancel, color: AppTheme.errorColor, size: 24);
+    }
+    if (isSelected) {
+      return const Icon(Icons.radio_button_checked,
+          color: AppTheme.primary200, size: 24);
+    }
+    return const Icon(Icons.radio_button_unchecked,
+        color: AppTheme.bg200, size: 24);
+  }
 
-// Step 5: بناء بطاقة الخيار
-//         - return InkWell(
-//             onTap: isCorrect != null ? null : onTap,  // تعطيل بعد الإجابة
-//             child: Container(
-//               width: double.infinity,
-//               padding: EdgeInsets.all(16),
-//               margin: EdgeInsets.symmetric(vertical: 4),
-//               decoration: BoxDecoration(
-//                 color: _getBackgroundColor(),
-//                 border: Border.all(color: borderColor, width: 2),
-//                 borderRadius: BorderRadius.circular(12),
-//               ),
-//               child: Row(children: [
-//                 // أيقونة الحالة
-//                 if (isCorrect == true) Icon(Icons.check_circle, color: Colors.green, size: 24),
-//                 if (isCorrect == false && isSelected) Icon(Icons.cancel, color: Colors.red, size: 24),
-//                 if (isCorrect == null && !isSelected) Icon(Icons.radio_button_unchecked, size: 24),
-//                 if (isCorrect == null && isSelected) Icon(Icons.radio_button_checked, color: Colors.blue, size: 24),
-//                 SizedBox(width: 12),
-//                 // نص الخيار
-//                 Expanded(
-//                   child: Text(
-//                     text,
-//                     style: TextStyle(fontSize: 18, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
-//                     textDirection: TextDirection.rtl,
-//                   ),
-//                 ),
-//               ]),
-//             ),
-//           );
-
-// Step 6: إنشاء method _getBackgroundColor()
-//         - إذا isCorrect == true: Colors.green.withOpacity(0.1)
-//         - إذا isCorrect == false && isSelected: Colors.red.withOpacity(0.1)
-//         - إذا isSelected: Colors.blue.withOpacity(0.1)
-//         - افتراضي: Colors.white
-
-// --- Notes ---
-// - ارتفاع كافي (padding 16) لسهولة اللمس (>= 48dp)
-// - تغيير اللون عند الاختيار: أزرق (محدد)، أخضر (صحيح)، أحمر (خطأ)
-// - تعطيل الضغط بعد الإجابة (isCorrect != null)
-// - أيقونات واضحة: دائرة فارغة، دائرة محددة، صح، خطأ
-// - نص كبير (18px) للأطفال
-// - RTL: النص والأيقونة من اليمين لليسار
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: isCorrect != null ? null : onTap,
+      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+      child: Container(
+        width: double.infinity,
+        constraints: const BoxConstraints(minHeight: 56),
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        decoration: BoxDecoration(
+          color: _backgroundColor,
+          border: Border.all(color: _borderColor, width: 2),
+          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+        ),
+        child: Row(
+          children: [
+            _icon,
+            if (letter != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? _borderColor.withValues(alpha: 0.15)
+                      : AppTheme.bg100,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  letter!,
+                  style: GoogleFonts.tajawal(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? _borderColor : AppTheme.text200,
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                text,
+                style: GoogleFonts.tajawal(
+                  fontSize: 18,
+                  fontWeight:
+                      isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: AppTheme.text100,
+                ),
+                textDirection: TextDirection.rtl,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
