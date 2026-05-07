@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:edu_smart_assistant/config/theme.dart';
+import 'package:edu_smart_assistant/providers/parent_provider.dart';
 import 'package:edu_smart_assistant/widgets/diyaa_inner_nav.dart';
 
 class ParentResultsScreen extends StatelessWidget {
@@ -13,16 +15,27 @@ class ParentResultsScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            const DiyaaInnerNav(title: '\u0646\u062a\u0627\u0626\u062c \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631\u0627\u062a'),
+            const DiyaaInnerNav(title: 'نتائج الاختبارات'),
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    _buildLastResultSummary(),
-                    _buildResultsTable(),
-                    const SizedBox(height: 24),
-                  ],
-                ),
+              child: Consumer<ParentProvider>(
+                builder: (_, parentProvider, __) {
+                  final report = parentProvider.weeklyReport;
+                  final results = _extractResults(report?.recentActivities);
+
+                  return SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        if (results.isNotEmpty)
+                          _buildLastResultSummary(results.first),
+                        if (results.isEmpty)
+                          _buildEmptyState()
+                        else
+                          _buildResultsTable(results),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -31,7 +44,38 @@ class ParentResultsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLastResultSummary() {
+  List<_ResultRow> _extractResults(List<dynamic>? activities) {
+    if (activities == null) return const [];
+    return activities.whereType<Map>().map((a) {
+      final scoreNum = (a['score'] is num)
+          ? (a['score'] as num).toDouble()
+          : double.tryParse(a['score']?.toString() ?? '') ?? 0.0;
+      // assume score in 0..100 — convert to /10 for display
+      final tenth = (scoreNum / 10).round().clamp(0, 10);
+      return _ResultRow(
+        type: _arabicType(a['quiz_type']?.toString() ?? ''),
+        score: '$tenth/10',
+        scoreValue: tenth,
+        date: a['date']?.toString() ?? '',
+        lessonName: a['lesson_name']?.toString() ?? '',
+      );
+    }).toList();
+  }
+
+  String _arabicType(String type) {
+    switch (type) {
+      case 'reading':
+        return 'تمرين قراءة';
+      case 'writing':
+        return 'تمرين كتابة';
+      case 'comprehension':
+        return 'استيعاب';
+      default:
+        return type.isEmpty ? 'اختبار' : type;
+    }
+  }
+
+  Widget _buildLastResultSummary(_ResultRow last) {
     return Container(
       margin: const EdgeInsets.all(14),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -41,14 +85,14 @@ class ParentResultsScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Text('\uD83C\uDFC6', style: TextStyle(fontSize: 24)),
+          const Text('🏆', style: TextStyle(fontSize: 24)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '\u0622\u062e\u0631 \u0646\u062a\u064a\u062c\u0629',
+                  'آخر نتيجة',
                   style: GoogleFonts.tajawal(
                     color: AppTheme.primary200,
                     fontSize: 12.5,
@@ -56,20 +100,23 @@ class ParentResultsScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '\u062a\u0645\u0631\u0651\u0646 \u0627\u0644\u0642\u0631\u0627\u0621\u0629 \u00B7 \u0668/\u0661\u0660',
+                  last.lessonName.isNotEmpty
+                      ? '${last.type} · ${last.lessonName} · ${last.score}'
+                      : '${last.type} · ${last.score}',
                   style: GoogleFonts.tajawal(
                     color: AppTheme.text100,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Text(
-                  '\u0627\u0644\u064a\u0648\u0645',
-                  style: GoogleFonts.tajawal(
-                    color: AppTheme.text200,
-                    fontSize: 12,
+                if (last.date.isNotEmpty)
+                  Text(
+                    last.date,
+                    style: GoogleFonts.tajawal(
+                      color: AppTheme.text200,
+                      fontSize: 12,
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -78,29 +125,35 @@ class ParentResultsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildResultsTable() {
-    const results = [
-      _ResultRow(
-          type: '\u0627\u062e\u062a\u0628\u0631', score: '\u0669/\u0661\u0660', scoreValue: 9, date: '\u0623\u0645\u0633'),
-      _ResultRow(
-          type: '\u062a\u0645\u0631\u0651\u0646 \u0642\u0631\u0627\u0621\u0629',
-          score: '\u0668/\u0661\u0660',
-          scoreValue: 8,
-          date: '\u0627\u0644\u064a\u0648\u0645'),
-      _ResultRow(
-          type: '\u062a\u0645\u0631\u0651\u0646 \u0643\u062a\u0627\u0628\u0629',
-          score: '\u0667/\u0661\u0660',
-          scoreValue: 7,
-          date: '\u0627\u0644\u0623\u062d\u062f'),
-      _ResultRow(
-          type: '\u0627\u062e\u062a\u0628\u0631', score: '\u0666/\u0661\u0660', scoreValue: 6, date: '\u0627\u0644\u0633\u0628\u062a'),
-      _ResultRow(
-          type: '\u062a\u0645\u0631\u0651\u0646 \u0642\u0631\u0627\u0621\u0629',
-          score: '\u0661\u0660/\u0661\u0660',
-          scoreValue: 10,
-          date: '\u0627\u0644\u062c\u0645\u0639\u0629'),
-    ];
+  Widget _buildEmptyState() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 80),
+      child: Column(
+        children: [
+          const Text('📝', style: TextStyle(fontSize: 48)),
+          const SizedBox(height: 12),
+          Text(
+            'لا توجد نتائج بعد',
+            style: GoogleFonts.tajawal(
+              color: AppTheme.text100,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'ستظهر درجات الاختبارات هنا فور إجرائها',
+            style: GoogleFonts.tajawal(
+              color: AppTheme.text200,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildResultsTable(List<_ResultRow> results) {
     return Container(
       margin: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -117,7 +170,6 @@ class ParentResultsScreen extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          // Header
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             color: AppTheme.bg100,
@@ -125,7 +177,7 @@ class ParentResultsScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '\u0627\u0644\u0646\u0648\u0639',
+                  'النوع',
                   style: GoogleFonts.tajawal(
                     color: AppTheme.text200,
                     fontSize: 12,
@@ -133,7 +185,7 @@ class ParentResultsScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '\u0627\u0644\u062f\u0631\u062c\u0629',
+                  'الدرجة',
                   style: GoogleFonts.tajawal(
                     color: AppTheme.text200,
                     fontSize: 12,
@@ -141,7 +193,7 @@ class ParentResultsScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '\u0627\u0644\u062a\u0627\u0631\u064a\u062e',
+                  'التاريخ',
                   style: GoogleFonts.tajawal(
                     color: AppTheme.text200,
                     fontSize: 12,
@@ -152,8 +204,7 @@ class ParentResultsScreen extends StatelessWidget {
             ),
           ),
           const Divider(height: 1, color: AppTheme.bg200),
-          // Data rows
-          ...results.map((result) => _buildResultRow(result)),
+          ...results.map(_buildResultRow),
         ],
       ),
     );
@@ -202,7 +253,7 @@ class ParentResultsScreen extends StatelessWidget {
           ),
           const SizedBox(width: 16),
           SizedBox(
-            width: 50,
+            width: 70,
             child: Text(
               result.date,
               style: GoogleFonts.tajawal(
@@ -223,11 +274,13 @@ class _ResultRow {
   final String score;
   final int scoreValue;
   final String date;
+  final String lessonName;
 
   const _ResultRow({
     required this.type,
     required this.score,
     required this.scoreValue,
     required this.date,
+    this.lessonName = '',
   });
 }

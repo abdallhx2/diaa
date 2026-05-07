@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -35,8 +37,12 @@ class _AddChildScreenState extends State<AddChildScreen> {
 
     setState(() => _isLoading = true);
 
+    final placeholderUid =
+        'child-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(0x7fffffff)}';
+
     final data = {
-      'name': _nameController.text.trim(),
+      'child_firebase_uid': placeholderUid,
+      'child_name': _nameController.text.trim(),
       'age': int.tryParse(_ageController.text.trim()) ?? 6,
       'grade': _selectedGrade,
       'learning_level': _selectedLevel,
