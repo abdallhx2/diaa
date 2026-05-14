@@ -1,11 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:edu_smart_assistant/config/theme.dart';
+import 'package:edu_smart_assistant/providers/subjects_provider.dart';
+import 'package:edu_smart_assistant/providers/student_provider.dart';
 import 'package:edu_smart_assistant/widgets/diyaa_inner_nav.dart';
 import 'package:edu_smart_assistant/screens/student/lesson_list_screen.dart';
 
-class SubjectSelectionScreen extends StatelessWidget {
+class SubjectSelectionScreen extends StatefulWidget {
   const SubjectSelectionScreen({super.key});
+
+  @override
+  State<SubjectSelectionScreen> createState() =>
+      _SubjectSelectionScreenState();
+}
+
+class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final grade =
+          context.read<StudentProvider>().studentData?.grade ?? 'الثالث';
+      context.read<SubjectsProvider>().loadSubjects(grade);
+    });
+  }
+
+  static const List<List<Color>> _subjectGradients = [
+    [Color(0xFF6B8CFF), Color(0xFFA78BFA)],
+    [Color(0xFF43E97B), Color(0xFF38F9D7)],
+    [Color(0xFFF093FB), Color(0xFFF5576C)],
+    [Color(0xFF4776E6), Color(0xFF8E54E9)],
+    [Color(0xFFFA8231), Color(0xFFF7B731)],
+    [Color(0xFF00B09B), Color(0xFF96C93D)],
+  ];
+
+  static const List<String> _subjectIcons = [
+    '📖', '🔬', '🔢', '🌍', '🎨', '📚',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -15,67 +47,70 @@ class SubjectSelectionScreen extends StatelessWidget {
         children: [
           const DiyaaInnerNav(title: 'ابدأ التعلم'),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Section title
-                  Text(
-                    'اختر المادة الدراسية',
-                    style: GoogleFonts.tajawal(
-                      color: AppTheme.text200,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+            child: Consumer<SubjectsProvider>(
+              builder: (context, provider, _) {
+                if (provider.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (provider.subjects.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'لا توجد مواد متاحة لصفك حالياً',
+                      style: GoogleFonts.tajawal(
+                        color: AppTheme.text200,
+                        fontSize: 15,
+                      ),
+                      textDirection: TextDirection.rtl,
                     ),
-                  ),
-                  const SizedBox(height: 14),
-                  // Subject cards
-                  _buildSubjectCard(
-                    context,
-                    icon: '📖',
-                    gradientColors: [
-                      const Color(0xFF6B8CFF),
-                      const Color(0xFFA78BFA),
-                    ],
-                    title: 'لغتي',
-                    subtitle: '١٢ درساً · الصف الثاني',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const LessonListScreen(
-                            subjectName: 'لغتي',
-                            subjectGrade: 'الصف الثاني',
-                          ),
+                  );
+                }
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'اختر المادة الدراسية',
+                        style: GoogleFonts.tajawal(
+                          color: AppTheme.text200,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
                         ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  _buildSubjectCard(
-                    context,
-                    icon: '🔬',
-                    gradientColors: [
-                      const Color(0xFF43E97B),
-                      const Color(0xFF38F9D7),
-                    ],
-                    title: 'العلوم',
-                    subtitle: '١٠ دروس · الصف الثاني',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const LessonListScreen(
-                            subjectName: 'العلوم',
-                            subjectGrade: 'الصف الثاني',
+                      ),
+                      const SizedBox(height: 14),
+                      ...provider.subjects.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final subject = entry.value;
+                        final grade =
+                            context.read<StudentProvider>().studentData?.grade ??
+                                'الثالث';
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildSubjectCard(
+                            context,
+                            icon: _subjectIcons[index % _subjectIcons.length],
+                            gradientColors: _subjectGradients[
+                                index % _subjectGradients.length],
+                            title: subject,
+                            subtitle: 'الصف $grade',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => LessonListScreen(
+                                    subjectName: subject,
+                                    subjectGrade: grade,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      }),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ],
@@ -112,7 +147,6 @@ class SubjectSelectionScreen extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Icon container with gradient
               Container(
                 width: 52,
                 height: 52,
@@ -125,13 +159,9 @@ class SubjectSelectionScreen extends StatelessWidget {
                   ),
                 ),
                 alignment: Alignment.center,
-                child: Text(
-                  icon,
-                  style: const TextStyle(fontSize: 26),
-                ),
+                child: Text(icon, style: const TextStyle(fontSize: 26)),
               ),
               const SizedBox(width: 14),
-              // Title and subtitle
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,7 +185,6 @@ class SubjectSelectionScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              // Arrow
               const Icon(
                 Icons.arrow_back_ios_new,
                 size: 16,

@@ -16,6 +16,7 @@ class Lesson(Base):
     original_text = Column(Text, nullable=False)
     qr_code = Column(String(100), nullable=True)
     audio_url = Column(String(500), nullable=True)
+    summary = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     sessions = relationship("LearningSession", back_populates="lesson")

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:edu_smart_assistant/config/theme.dart';
+import 'package:edu_smart_assistant/providers/lessons_provider.dart';
+import 'package:edu_smart_assistant/models/lesson_model.dart';
 import 'package:edu_smart_assistant/widgets/diyaa_inner_nav.dart';
 import 'package:edu_smart_assistant/screens/student/lesson_detail_screen.dart';
 
-class LessonListScreen extends StatelessWidget {
+class LessonListScreen extends StatefulWidget {
   final String subjectName;
   final String subjectGrade;
 
@@ -15,45 +18,65 @@ class LessonListScreen extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    // Static demo data
-    final lessons = [
-      {'title': 'الأسرة', 'done': true},
-      {'title': 'المدرسة', 'done': true},
-      {'title': 'الطبيعة', 'done': false},
-      {'title': 'الألوان', 'done': false},
-      {'title': 'الحيوانات', 'done': false},
-    ];
+  State<LessonListScreen> createState() => _LessonListScreenState();
+}
 
+class _LessonListScreenState extends State<LessonListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context
+          .read<LessonsProvider>()
+          .loadLessons(widget.subjectGrade, widget.subjectName);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.bg100,
       body: Column(
         children: [
-          DiyaaInnerNav(title: '$subjectName — $subjectGrade'),
+          DiyaaInnerNav(title: '${widget.subjectName} — ${widget.subjectGrade}'),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Section title
-                  Text(
-                    'اختر الدرس',
-                    style: GoogleFonts.tajawal(
-                      color: AppTheme.text200,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+            child: Consumer<LessonsProvider>(
+              builder: (context, provider, _) {
+                if (provider.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (provider.lessons.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'لا توجد دروس متاحة لصفك حالياً',
+                      style: GoogleFonts.tajawal(
+                        color: AppTheme.text200,
+                        fontSize: 15,
+                      ),
+                      textDirection: TextDirection.rtl,
                     ),
+                  );
+                }
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'اختر الدرس',
+                        style: GoogleFonts.tajawal(
+                          color: AppTheme.text200,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      ...provider.lessons
+                          .map((lesson) => _buildLessonItem(context, lesson)),
+                    ],
                   ),
-                  const SizedBox(height: 14),
-                  // Lesson items
-                  ...lessons.map((lesson) {
-                    final title = lesson['title'] as String;
-                    final done = lesson['done'] as bool;
-                    return _buildLessonItem(context, title: title, done: done);
-                  }),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ],
@@ -61,11 +84,7 @@ class LessonListScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLessonItem(
-    BuildContext context, {
-    required String title,
-    required bool done,
-  }) {
+  Widget _buildLessonItem(BuildContext context, LessonModel lesson) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
@@ -83,52 +102,36 @@ class LessonListScreen extends StatelessWidget {
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(AppTheme.radiusSm),
         child: InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => LessonDetailScreen(lessonName: title),
-              ),
-            );
-          },
+          onTap: () => _openLesson(context, lesson),
           borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
-                // Status circle
                 Container(
                   width: 28,
                   height: 28,
-                  decoration: BoxDecoration(
-                    color: done
-                        ? const Color(0xFFE8F5E9)
-                        : AppTheme.bg200,
+                  decoration: const BoxDecoration(
+                    color: AppTheme.bg200,
                     shape: BoxShape.circle,
-                    border: done
-                        ? null
-                        : Border.all(color: AppTheme.text200, width: 2),
                   ),
                   alignment: Alignment.center,
-                  child: Text(
-                    done ? '✓' : '○',
+                  child: const Text(
+                    '○',
                     style: TextStyle(
-                      color: done
-                          ? const Color(0xFF2E7D32)
-                          : AppTheme.text200,
-                      fontSize: done ? 14 : 10,
+                      color: AppTheme.text200,
+                      fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Text column
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        title,
+                        lesson.title,
                         style: GoogleFonts.tajawal(
                           color: AppTheme.text100,
                           fontSize: 14,
@@ -137,7 +140,7 @@ class LessonListScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        done ? 'مكتمل' : 'غير مكتمل',
+                        lesson.subject,
                         style: GoogleFonts.tajawal(
                           color: AppTheme.text200,
                           fontSize: 12,
@@ -146,30 +149,21 @@ class LessonListScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                // Action button
                 GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            LessonDetailScreen(lessonName: title),
-                      ),
-                    );
-                  },
+                  onTap: () => _openLesson(context, lesson),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 14,
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: done ? AppTheme.bg200 : AppTheme.primary200,
+                      color: AppTheme.primary200,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      done ? 'فتح' : 'ابدأ',
+                      'ابدأ',
                       style: GoogleFonts.tajawal(
-                        color: done ? AppTheme.primary200 : Colors.white,
+                        color: Colors.white,
                         fontSize: 12.5,
                         fontWeight: FontWeight.bold,
                       ),
@@ -179,6 +173,18 @@ class LessonListScreen extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  void _openLesson(BuildContext context, LessonModel lesson) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => LessonDetailScreen(
+          lessonId: lesson.id,
+          lessonName: lesson.title,
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:camera/camera.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:edu_smart_assistant/providers/lesson_provider.dart';
 import 'package:edu_smart_assistant/config/routes.dart';
@@ -98,6 +99,56 @@ class _ScanPageScreenState extends State<ScanPageScreen> {
           const SnackBar(
             content: Text(
               '\u0644\u0645 \u0646\u062A\u0645\u0643\u0646 \u0645\u0646 \u0627\u0633\u062A\u062E\u0631\u0627\u062C \u0627\u0644\u0646\u0635\u060C \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649',
+              textDirection: TextDirection.rtl,
+            ),
+          ),
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() => _isProcessing = false);
+    }
+  }
+
+  Future<void> _pickFromGallery() async {
+    if (_isProcessing) return;
+
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 90,
+    );
+    if (picked == null) return;
+
+    setState(() => _isProcessing = true);
+
+    try {
+      if (!mounted) return;
+      await context.read<LessonProvider>().processImage(File(picked.path));
+
+      if (!mounted) return;
+
+      final lessonProvider = context.read<LessonProvider>();
+      if (lessonProvider.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              lessonProvider.errorMessage!,
+              textDirection: TextDirection.rtl,
+            ),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      } else {
+        Navigator.pushNamed(context, AppRoutes.textDisplay);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'لم نتمكن من استخراج النص، حاول مرة أخرى',
               textDirection: TextDirection.rtl,
             ),
           ),
@@ -278,6 +329,49 @@ class _ScanPageScreenState extends State<ScanPageScreen> {
                 ),
                 child: Text(
                   '\uD83D\uDCF7 \u0627\u0644\u062A\u0642\u0627\u0637 \u0627\u0644\u0635\u0648\u0631\u0629',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.tajawal(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // Gallery picker button
+            GestureDetector(
+              onTap: _isProcessing ? null : _pickFromGallery,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: _isProcessing
+                        ? [Colors.grey.shade700, Colors.grey.shade600]
+                        : [
+                            AppTheme.primary200.withValues(alpha: 0.7),
+                            AppTheme.primary100.withValues(alpha: 0.9),
+                          ],
+                    begin: Alignment.centerRight,
+                    end: Alignment.centerLeft,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: _isProcessing
+                      ? []
+                      : [
+                          BoxShadow(
+                            color: AppTheme.primary100.withValues(alpha: 0.35),
+                            blurRadius: 14,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                ),
+                child: Text(
+                  '\uD83D\uDDBC\uFE0F \u0627\u062E\u062A\u0631 \u0645\u0646 \u0627\u0644\u0645\u0639\u0631\u0636',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.tajawal(
                     color: Colors.white,

@@ -9,6 +9,8 @@ import 'package:edu_smart_assistant/providers/lesson_provider.dart';
 import 'package:edu_smart_assistant/providers/quiz_provider.dart';
 import 'package:edu_smart_assistant/providers/chat_provider.dart';
 import 'package:edu_smart_assistant/providers/parent_provider.dart';
+import 'package:edu_smart_assistant/providers/subjects_provider.dart';
+import 'package:edu_smart_assistant/providers/lessons_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +32,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => QuizProvider()),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
         ChangeNotifierProvider(create: (_) => ParentProvider()),
+        ChangeNotifierProvider(create: (_) => SubjectsProvider()),
+        ChangeNotifierProvider(create: (_) => LessonsProvider()),
       ],
       child: const MyApp(),
     ),

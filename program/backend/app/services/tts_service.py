@@ -4,14 +4,11 @@ import io
 import wave
 import json
 import base64
-import tempfile
 import httpx
 from app.config import settings
-from app.services.storage_service import (
-    get_download_url,
-    get_cached_audio,
-    upload_audio,
-)
+
+# In-memory cache: cache_key → local URL
+_audio_cache: dict[str, str] = {}
 
 
 def _get_cache_key(text: str) -> str:
@@ -81,7 +78,7 @@ def _generate_audio_via_openrouter(text: str) -> bytes:
 
 def convert_to_speech(text: str) -> str:
     """Convert Arabic text to speech via OpenRouter audio model.
-    Flow: cache check → OpenRouter TTS → Firebase upload → cache store → return URL.
+    Flow: memory cache → local file check → OpenRouter TTS → write to static/audio/ → return URL.
     """
     if not text or not text.strip():
         raise ValueError("النص مطلوب لتحويله إلى صوت")
@@ -90,43 +87,36 @@ def convert_to_speech(text: str) -> str:
         from app.services.mock_services import MockTTS
         return MockTTS.convert(text)
 
-    temp_path = None
     try:
         cache_key = _get_cache_key(text)
 
-        # Check in-memory cache first
-        cached_url = get_cached_audio(cache_key)
-        if cached_url:
-            return cached_url
+        # In-memory cache fast path
+        if cache_key in _audio_cache:
+            return _audio_cache[cache_key]
 
-        # Check Firebase Storage
-        storage_path = f"audio/{cache_key}.wav"
-        existing_url = get_download_url(storage_path)
-        if existing_url:
-            return existing_url
+        audio_dir = "static/audio"
+        os.makedirs(audio_dir, exist_ok=True)
+        file_path = os.path.join(audio_dir, f"{cache_key}.wav")
+        audio_url = f"/static/audio/{cache_key}.wav"
+
+        # File already on disk — no need to regenerate
+        if os.path.exists(file_path):
+            _audio_cache[cache_key] = audio_url
+            return audio_url
 
         # Generate speech via OpenRouter
         wav_bytes = _generate_audio_via_openrouter(text)
 
-        # Write to temp file, then upload
-        fd, temp_path = tempfile.mkstemp(suffix=".wav")
-        os.close(fd)
-        with open(temp_path, "wb") as f:
+        with open(file_path, "wb") as f:
             f.write(wav_bytes)
 
-        audio_url = upload_audio(temp_path, cache_key)
+        _audio_cache[cache_key] = audio_url
         return audio_url
 
     except ValueError:
         raise
     except Exception as e:
         raise Exception(f"خطأ في خدمة تحويل النص إلى صوت: {str(e)}")
-    finally:
-        if temp_path and os.path.exists(temp_path):
-            try:
-                os.remove(temp_path)
-            except OSError:
-                pass
 
 
 def convert_to_speech_fallback(text: str) -> dict:

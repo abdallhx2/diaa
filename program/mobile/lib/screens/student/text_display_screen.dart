@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:edu_smart_assistant/providers/lesson_provider.dart';
 import 'package:edu_smart_assistant/config/theme.dart';
 import 'package:edu_smart_assistant/widgets/diyaa_inner_nav.dart';
@@ -14,14 +15,49 @@ class TextDisplayScreen extends StatefulWidget {
 }
 
 class _TextDisplayScreenState extends State<TextDisplayScreen> {
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _isPlaying = false;
+  bool _audioReady = false;
+
   @override
   void initState() {
     super.initState();
+    _audioPlayer.playerStateStream.listen((state) {
+      if (mounted) setState(() => _isPlaying = state.playing);
+    });
+
     final lessonProvider = context.read<LessonProvider>();
-    if (lessonProvider.audioUrl == null &&
-        lessonProvider.extractedText != null) {
-      Future.microtask(() => lessonProvider.generateAudio());
+    if (lessonProvider.audioUrl != null) {
+      _loadAudio(lessonProvider.audioUrl!);
+    } else if (lessonProvider.extractedText != null) {
+      Future.microtask(() async {
+        await lessonProvider.generateAudio();
+        if (mounted && lessonProvider.audioUrl != null) {
+          await _loadAudio(lessonProvider.audioUrl!);
+        }
+      });
     }
+  }
+
+  Future<void> _loadAudio(String url) async {
+    try {
+      await _audioPlayer.setUrl(url);
+      if (mounted) setState(() => _audioReady = true);
+    } catch (_) {}
+  }
+
+  Future<void> _togglePlay() async {
+    if (_isPlaying) {
+      await _audioPlayer.pause();
+    } else {
+      await _audioPlayer.play();
+    }
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
   }
 
   @override
@@ -36,12 +72,8 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Nav
-                const DiyaaInnerNav(
-                    title:
-                        '\u0646\u062A\u064A\u062C\u0629 \u0627\u0642\u0631\u0623 \u0644\u064A'),
+                const DiyaaInnerNav(title: 'نتيجة اقرأ لي'),
 
-                // Success badge
                 Container(
                   margin: const EdgeInsets.all(14),
                   padding: const EdgeInsets.symmetric(
@@ -55,13 +87,10 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        '\u2705',
-                        style: GoogleFonts.tajawal(fontSize: 14),
-                      ),
+                      const Text('✅', style: TextStyle(fontSize: 14)),
                       const SizedBox(width: 6),
                       Text(
-                        '\u062A\u0645 \u0627\u0633\u062A\u062E\u0631\u0627\u062C \u0627\u0644\u0646\u0635 \u0628\u0646\u062C\u0627\u062D',
+                        'تم استخراج النص بنجاح',
                         style: GoogleFonts.tajawal(
                           color: const Color(0xFF2E7D32),
                           fontSize: 13,
@@ -72,7 +101,6 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
                   ),
                 ),
 
-                // Text box
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 14),
                   padding: const EdgeInsets.all(16),
@@ -100,14 +128,13 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
                 ),
                 const SizedBox(height: 14),
 
-                // Audio section
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '\uD83D\uDD0A \u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u0635\u0648\u062A',
+                        'تشغيل الصوت',
                         style: GoogleFonts.tajawal(
                           color: AppTheme.primary200,
                           fontSize: 13,
@@ -118,12 +145,9 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
 
                       if (lessonProvider.isProcessing)
                         const Center(
-                          child: LoadingWidget(
-                              message:
-                                  '\u062C\u0627\u0631\u064A \u062A\u0648\u0644\u064A\u062F \u0627\u0644\u0635\u0648\u062A...'),
+                          child: LoadingWidget(message: 'جاري توليد الصوت...'),
                         )
                       else
-                        // Audio bar
                         Container(
                           padding: const EdgeInsets.symmetric(
                             vertical: 14,
@@ -142,86 +166,63 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
                           ),
                           child: Row(
                             children: [
-                              // Play button
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: const BoxDecoration(
-                                  color: AppTheme.primary200,
-                                  shape: BoxShape.circle,
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  '\u25B6',
-                                  style: GoogleFonts.tajawal(
-                                    color: Colors.white,
-                                    fontSize: 16,
+                              GestureDetector(
+                                onTap: _audioReady ? _togglePlay : null,
+                                child: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: _audioReady
+                                        ? AppTheme.primary200
+                                        : AppTheme.text200,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    _audioReady
+                                        ? (_isPlaying ? '⏸' : '▶')
+                                        : '🔇',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                    ),
                                   ),
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              // Wave bars
-                              Row(
-                                children: List.generate(6, (index) {
-                                  final heights = [12.0, 18.0, 10.0, 22.0, 14.0, 8.0];
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 2),
-                                    child: Container(
-                                      width: 3,
-                                      height: heights[index],
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.primary100
-                                            .withValues(alpha: 0.5),
-                                        borderRadius:
-                                            BorderRadius.circular(2),
+                              if (!_audioReady && lessonProvider.audioUrl == null)
+                                Text(
+                                  'الصوت غير متاح حالياً',
+                                  style: GoogleFonts.tajawal(
+                                    color: AppTheme.text200,
+                                    fontSize: 12,
+                                  ),
+                                )
+                              else
+                                Row(
+                                  children: List.generate(6, (i) {
+                                    final heights = [
+                                      12.0, 18.0, 10.0, 22.0, 14.0, 8.0
+                                    ];
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 2),
+                                      child: Container(
+                                        width: 3,
+                                        height: heights[i],
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.primary100
+                                              .withValues(alpha: 0.5),
+                                          borderRadius:
+                                              BorderRadius.circular(2),
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                }),
-                              ),
-                              const Spacer(),
-                              // Time text
-                              Text(
-                                '0:00',
-                                style: GoogleFonts.tajawal(
-                                  color: AppTheme.text200,
-                                  fontSize: 12,
+                                    );
+                                  }),
                                 ),
-                              ),
                             ],
                           ),
                         ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // Save button
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 14),
-                  padding: const EdgeInsets.all(13),
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: AppTheme.bg200,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        '\uD83D\uDCBE',
-                        style: GoogleFonts.tajawal(fontSize: 16),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '\u062D\u0641\u0638 \u0641\u064A \u0627\u0644\u0633\u062C\u0644',
-                        style: GoogleFonts.tajawal(
-                          color: AppTheme.primary200,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
                     ],
                   ),
                 ),

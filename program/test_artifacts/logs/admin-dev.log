@@ -1,0 +1,38 @@
+
+> edu-smart-admin@1.0.0 dev
+> next dev
+
+  ▲ Next.js 14.2.29
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 14.2s
+ ○ Compiling / ...
+ ✓ Compiled / in 27.8s (804 modules)
+ GET / 200 in 3114ms
+ GET / 200 in 67ms
+ GET / 200 in 56ms
+ GET / 200 in 49ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 1400ms (853 modules)
+ GET / 200 in 140ms
+ GET / 200 in 38ms
+ GET / 200 in 42ms
+ GET / 200 in 36ms
+ GET /dashboard 200 in 55ms
+ GET / 200 in 52ms
+ GET /dashboard 200 in 46ms
+ GET / 200 in 35ms
+ GET / 200 in 57ms
+ GET / 200 in 40ms
+ ○ Compiling /subjects ...
+ ✓ Compiled /subjects in 2.1s (861 modules)
+ ○ Compiling /lessons ...
+ ✓ Compiled /lessons in 634ms (869 modules)
+ ○ Compiling /quizzes ...
+ ✓ Compiled /quizzes in 1973ms (883 modules)
+ GET /quizzes 200 in 2174ms
+ GET /dashboard 200 in 80ms
+ GET / 200 in 48ms
+[?25h

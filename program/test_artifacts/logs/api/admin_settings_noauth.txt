@@ -1,0 +1,2 @@
+{"detail":{"success":false,"data":null,"message":"التوكن مطلوب"}}
+HTTP 401

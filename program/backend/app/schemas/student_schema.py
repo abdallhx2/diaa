@@ -32,7 +32,7 @@ class StudentResponse(BaseModel):
 
 class SessionStartRequest(BaseModel):
     lesson_id: UUID
-    session_type: str
+    session_type: Optional[str] = "scan"
 
 
 class SessionResponse(BaseModel):

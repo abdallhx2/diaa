@@ -4,6 +4,24 @@ from app.models.chat_message import ChatMessage
 from app.models.lesson import Lesson
 from app.services.openrouter_client import client
 
+SUMMARIZE_PROMPT = "لخّص الفقرة التالية للأطفال في ٣ جمل قصيرة وبسيطة:\n\n{text}"
+
+
+async def summarize(text: str) -> str:
+    """Generate a child-friendly summary via OpenRouter. Falls back to first 200 chars on failure."""
+    if settings.MOCK_AI or not client:
+        return text[:200]
+    try:
+        response = client.chat.completions.create(
+            model=settings.CHAT_MODEL,
+            messages=[{"role": "user", "content": SUMMARIZE_PROMPT.format(text=text)}],
+            max_tokens=200,
+            temperature=0.5,
+        )
+        return response.choices[0].message.content
+    except Exception:
+        return text[:200]
+
 SYSTEM_PROMPT = """أنت مساعد تعليمي ذكي للأطفال في المرحلة الابتدائية.
 أجب فقط بناءً على محتوى الدرس المقدم.
 إذا كان السؤال خارج محتوى الدرس، قل: "هذا السؤال خارج محتوى الدرس الحالي."

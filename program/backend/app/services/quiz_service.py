@@ -50,7 +50,14 @@ def submit_answer(db: Session, student_id: UUID, quiz_id: UUID, selected_answer:
         if not quiz:
             raise Exception("الاختبار غير موجود")
 
-        is_correct = selected_answer.strip() == quiz.correct_answer.strip()
+        sel = (selected_answer or "").strip()
+        stored = (quiz.correct_answer or "").strip()
+        # Resolve correct_answer to its value if it is a key into options dict.
+        if isinstance(quiz.options, dict) and stored in quiz.options:
+            correct_value = str(quiz.options[stored]).strip()
+        else:
+            correct_value = stored
+        is_correct = sel == correct_value or sel == stored
 
         result = QuizResult(
             student_id=student_id,
@@ -113,8 +120,13 @@ def get_random_questions(db: Session, lesson_id: UUID, count: int = 5) -> list:
 
         result = []
         for q in selected:
-            # Shuffle options for each question
-            options = list(q.options) if q.options else []
+            # Shuffle options for each question (handle dict {key:value} or list)
+            if isinstance(q.options, dict):
+                options = list(q.options.values())
+            elif q.options:
+                options = list(q.options)
+            else:
+                options = []
             random.shuffle(options)
 
             result.append({

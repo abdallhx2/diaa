@@ -1,0 +1,2 @@
+{"success":true,"data":null,"message":"Edu Smart Assistant API is running"}
+HTTP 200

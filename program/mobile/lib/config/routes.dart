@@ -21,7 +21,7 @@ import 'package:edu_smart_assistant/screens/parent/reports_screen.dart';
 import 'package:edu_smart_assistant/screens/student/subject_selection_screen.dart';
 import 'package:edu_smart_assistant/screens/student/lesson_list_screen.dart';
 import 'package:edu_smart_assistant/screens/student/lesson_detail_screen.dart';
-import 'package:edu_smart_assistant/screens/quiz/practice_selection_screen.dart';
+import 'package:edu_smart_assistant/screens/student/practice_select_screen.dart';
 import 'package:edu_smart_assistant/screens/parent/parent_progress_screen.dart';
 import 'package:edu_smart_assistant/screens/parent/parent_results_screen.dart';
 import 'package:edu_smart_assistant/screens/parent/completed_lessons_screen.dart';
@@ -106,9 +106,9 @@ class AppRoutes {
       case lessonList:
         return MaterialPageRoute(settings: settings, builder: (_) => const LessonListScreen(subjectName: '', subjectGrade: ''));
       case lessonDetail:
-        return MaterialPageRoute(settings: settings, builder: (_) => const LessonDetailScreen(lessonName: ''));
+        return MaterialPageRoute(settings: settings, builder: (_) => const LessonDetailScreen(lessonId: '', lessonName: ''));
       case practiceSelect:
-        return MaterialPageRoute(settings: settings, builder: (_) => const PracticeSelectionScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const PracticeSelectScreen());
       case parentProgress:
         return MaterialPageRoute(settings: settings, builder: (_) => const ParentProgressScreen());
       case parentResults:

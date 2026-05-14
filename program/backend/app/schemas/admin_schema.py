@@ -16,6 +16,7 @@ class UserManage(BaseModel):
     email: Optional[str] = None
     role: Optional[str] = None
     is_active: Optional[bool] = None
+    grade: Optional[str] = None
 
 
 class SystemSettings(BaseModel):

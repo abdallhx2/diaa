@@ -53,4 +53,27 @@ class StudentService {
       throw Exception('فشل في جلب بيانات التقدم');
     }
   }
+
+  /// بدء جلسة تعلم — يعيد session id
+  Future<String?> startSession(String lessonId) async {
+    try {
+      final response = await _apiService.post('/student/sessions/start', data: {
+        'lesson_id': lessonId,
+      });
+      final data = response.data;
+      if (data['success'] == true) {
+        return data['data']?['id']?.toString();
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// إنهاء جلسة تعلم
+  Future<void> endSession(String sessionId) async {
+    try {
+      await _apiService.post('/student/sessions/$sessionId/end', data: {});
+    } catch (_) {}
+  }
 }

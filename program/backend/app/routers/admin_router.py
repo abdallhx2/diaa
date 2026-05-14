@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.database import get_db
 from app.models.user import User
+from app.models.student import Student
 from app.models.lesson import Lesson
 from app.models.system_log import SystemLog
 from app.models.learning_session import LearningSession
@@ -174,6 +175,10 @@ async def update_user(
             user.email = body.email
         if body.is_active is not None:
             user.is_active = body.is_active
+        if body.grade is not None:
+            student = db.query(Student).filter(Student.user_id == user.id).first()
+            if student:
+                student.grade = body.grade
 
         db.commit()
         return format_response(True, {"id": str(user.id), "name": user.name}, "تم تعديل المستخدم")

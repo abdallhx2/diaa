@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from app.config import settings
 
 
@@ -80,6 +81,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Static Files (TTS audio) ──
+import os as _os
+_os.makedirs("static/audio", exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 # ── Logging Middleware ──
 from app.middleware.logging_middleware import LoggingMiddleware
 app.add_middleware(LoggingMiddleware)
@@ -104,7 +110,9 @@ async def general_exception_handler(request, exc):
 
 # ── Register Routers ──
 from app.routers import auth_router, student_router, scan_router, tts_router, chat_router, quiz_router, parent_router, admin_router
+from app.routers import lesson_router
 
+app.include_router(lesson_router.router, prefix="/api/lessons", tags=["lessons"])
 app.include_router(auth_router.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(student_router.router, prefix="/api/student", tags=["Student"])
 app.include_router(scan_router.router, prefix="/api/scan", tags=["Scan & OCR"])
