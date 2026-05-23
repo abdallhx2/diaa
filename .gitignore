@@ -26,3 +26,6 @@ program/backend/service-account*.json
 # JVM crash dumps
 program/hs_err_pid*.log
 program/replay_pid*.log
+
+# Local test artifacts (screenshots, UI dumps)
+program/test_artifacts/
