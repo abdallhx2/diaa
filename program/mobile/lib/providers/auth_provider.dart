@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:edu_smart_assistant/models/user_model.dart';
 import 'package:edu_smart_assistant/services/auth_service.dart';
+import 'package:edu_smart_assistant/services/fcm_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   UserModel? _currentUser;
@@ -34,6 +35,10 @@ class AuthProvider extends ChangeNotifier {
       await prefs.setBool('isLoggedIn', true);
       await prefs.setString('userRole', user.role);
       await prefs.setString('userId', user.id);
+
+      if (user.role == 'parent') {
+        FcmService.instance.initForParent();
+      }
 
       _isLoading = false;
       notifyListeners();
@@ -82,6 +87,9 @@ class AuthProvider extends ChangeNotifier {
               : user;
           _isAuthenticated = true;
           _userRole = savedRole ?? user.role;
+          if (_userRole == 'parent') {
+            FcmService.instance.initForParent();
+          }
         } else {
           _isAuthenticated = false;
           _userRole = null;
@@ -119,6 +127,8 @@ class AuthProvider extends ChangeNotifier {
       await prefs.setBool('isLoggedIn', true);
       await prefs.setString('userRole', 'parent');
       await prefs.setString('userId', user.id);
+
+      FcmService.instance.initForParent();
 
       _isLoading = false;
       notifyListeners();

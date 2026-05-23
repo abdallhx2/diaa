@@ -1,0 +1,8 @@
+[Unit]
+Description=Edu Smart Audio Cleanup
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/edu-smart/backend/venv/bin/python /opt/edu-smart/backend/scripts/cleanup_audio.py
+WorkingDirectory=/opt/edu-smart/backend

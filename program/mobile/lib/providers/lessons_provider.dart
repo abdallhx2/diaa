@@ -53,4 +53,10 @@ class LessonsProvider extends ChangeNotifier {
     _detail = null;
     notifyListeners();
   }
+
+  void cleanup() {
+    _detail = null;
+    _errorMessage = null;
+    notifyListeners();
+  }
 }

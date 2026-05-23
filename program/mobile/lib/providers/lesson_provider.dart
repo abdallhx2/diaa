@@ -116,4 +116,13 @@ class LessonProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+
+  void cleanup() {
+    _currentLesson = null;
+    _extractedText = null;
+    _audioUrl = null;
+    _isProcessing = false;
+    _errorMessage = null;
+    notifyListeners();
+  }
 }

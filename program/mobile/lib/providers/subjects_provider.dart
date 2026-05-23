@@ -26,4 +26,10 @@ class SubjectsProvider extends ChangeNotifier {
     _isLoading = false;
     notifyListeners();
   }
+
+  void cleanup() {
+    _subjects = [];
+    _errorMessage = null;
+    notifyListeners();
+  }
 }

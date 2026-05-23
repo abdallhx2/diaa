@@ -11,6 +11,8 @@ from app.models.learning_session import LearningSession, SessionType
 from app.models.quiz_result import QuizResult
 from app.middleware.auth_middleware import get_current_user
 from app.schemas.student_schema import SessionStartRequest, SessionResponse
+from app.services import achievement_service
+from app.services import notification_service
 from app.utils.helpers import format_response
 
 router = APIRouter()
@@ -238,6 +240,14 @@ async def end_session(
         session.duration_minutes = duration
         db.commit()
         db.refresh(session)
+
+        achievement_service.record_lesson_completed(db, student.id)
+        achievement_service.record_activity(db, student.id)
+
+        lesson_title = session.lesson.title if session.lesson else ""
+        notification_service.notify_parent_of_child_event(
+            db, student.id, "lesson_completed", {"lesson_title": lesson_title}
+        )
 
         return format_response(True, {
             "id": str(session.id),

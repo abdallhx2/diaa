@@ -4,6 +4,7 @@ from app.services.tts_service import generate_speech
 from app.models.user import User
 from app.middleware.auth_middleware import get_current_user
 from app.utils.helpers import format_response
+from app.utils import rate_limiter
 
 router = APIRouter()
 
@@ -18,6 +19,11 @@ async def generate_tts(
     current_user: User = Depends(get_current_user),
 ):
     """Convert Arabic text to speech and return audio URL."""
+    if not rate_limiter.check(current_user.firebase_uid, 15):
+        raise HTTPException(
+            status_code=429,
+            detail=format_response(False, None, "تجاوزت الحد المسموح، حاول بعد قليل"),
+        )
     try:
         if not body.text or not body.text.strip():
             raise HTTPException(

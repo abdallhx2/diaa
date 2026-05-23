@@ -78,4 +78,12 @@ class ChatProvider extends ChangeNotifier {
     _currentLessonId = null;
     notifyListeners();
   }
+
+  void cleanup() {
+    _messages = [];
+    _errorMessage = null;
+    _isLoading = false;
+    _currentLessonId = null;
+    notifyListeners();
+  }
 }

@@ -11,6 +11,8 @@ import 'package:edu_smart_assistant/providers/chat_provider.dart';
 import 'package:edu_smart_assistant/providers/parent_provider.dart';
 import 'package:edu_smart_assistant/providers/subjects_provider.dart';
 import 'package:edu_smart_assistant/providers/lessons_provider.dart';
+import 'package:edu_smart_assistant/providers/achievement_provider.dart';
+import 'package:edu_smart_assistant/services/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +21,7 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    FcmService.registerBackgroundHandler();
   } catch (e) {
     debugPrint('خطأ في تهيئة Firebase: $e');
   }
@@ -34,6 +37,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ParentProvider()),
         ChangeNotifierProvider(create: (_) => SubjectsProvider()),
         ChangeNotifierProvider(create: (_) => LessonsProvider()),
+        ChangeNotifierProvider(create: (_) => AchievementProvider()),
       ],
       child: const MyApp(),
     ),

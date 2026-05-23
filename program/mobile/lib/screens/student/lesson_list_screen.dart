@@ -6,6 +6,9 @@ import 'package:edu_smart_assistant/providers/lessons_provider.dart';
 import 'package:edu_smart_assistant/models/lesson_model.dart';
 import 'package:edu_smart_assistant/widgets/diyaa_inner_nav.dart';
 import 'package:edu_smart_assistant/screens/student/lesson_detail_screen.dart';
+import 'package:edu_smart_assistant/widgets/feedback/skeleton_list.dart';
+import 'package:edu_smart_assistant/widgets/feedback/empty_state.dart';
+import 'package:edu_smart_assistant/widgets/feedback/error_state.dart';
 
 class LessonListScreen extends StatefulWidget {
   final String subjectName;
@@ -43,18 +46,20 @@ class _LessonListScreenState extends State<LessonListScreen> {
             child: Consumer<LessonsProvider>(
               builder: (context, provider, _) {
                 if (provider.isLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const SkeletonList(count: 4);
+                }
+                if (provider.errorMessage != null) {
+                  return ErrorState(
+                    onRetry: () => context
+                        .read<LessonsProvider>()
+                        .loadLessons(widget.subjectGrade, widget.subjectName),
+                  );
                 }
                 if (provider.lessons.isEmpty) {
-                  return Center(
-                    child: Text(
-                      'لا توجد دروس متاحة لصفك حالياً',
-                      style: GoogleFonts.tajawal(
-                        color: AppTheme.text200,
-                        fontSize: 15,
-                      ),
-                      textDirection: TextDirection.rtl,
-                    ),
+                  return const EmptyState(
+                    emoji: '📖',
+                    title: 'ما عندك دروس بعد',
+                    subtitle: 'ابدأ من الرئيسية',
                   );
                 }
                 return SingleChildScrollView(

@@ -3,8 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:edu_smart_assistant/config/theme.dart';
 import 'package:edu_smart_assistant/providers/quiz_provider.dart';
+import 'package:edu_smart_assistant/providers/achievement_provider.dart';
 import 'package:edu_smart_assistant/widgets/diyaa_inner_nav.dart';
 import 'package:edu_smart_assistant/widgets/custom_button.dart';
+import 'package:edu_smart_assistant/utils/navigation_helpers.dart';
 
 class PracticeQuizScreen extends StatefulWidget {
   final String lessonId;
@@ -34,8 +36,18 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen> {
   }
 
   @override
+  void dispose() {
+    context.read<QuizProvider>().cleanup();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) context.read<QuizProvider>().cleanup();
+      },
+      child: Scaffold(
       backgroundColor: AppTheme.bg100,
       body: Column(
         children: [
@@ -66,6 +78,7 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -218,6 +231,8 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen> {
                     onPressed: _selectedOption >= 0
                         ? () async {
                             final answer = quiz.options[_selectedOption];
+                            final achievementProvider =
+                                context.read<AchievementProvider>();
                             await provider.submitAnswer(quiz.id, answer);
                             final result = provider.results.isNotEmpty
                                 ? provider.results.last
@@ -227,6 +242,9 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen> {
                                 _showResult = true;
                                 _lastAnswerCorrect = result?.isCorrect ?? false;
                               });
+                              if (provider.isCompleted) {
+                                achievementProvider.loadProgress();
+                              }
                             }
                           }
                         : null,
@@ -285,6 +303,20 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen> {
                 'اختر مادة أخرى',
                 style: GoogleFonts.tajawal(
                   color: AppTheme.primary200,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => finishToDashboard(
+                context,
+                cleanup: () => context.read<QuizProvider>().cleanup(),
+              ),
+              child: Text(
+                'العودة للرئيسية',
+                style: GoogleFonts.tajawal(
+                  color: AppTheme.text200,
                   fontSize: 14,
                 ),
               ),

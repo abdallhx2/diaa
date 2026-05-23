@@ -110,7 +110,7 @@ async def general_exception_handler(request, exc):
 
 # ── Register Routers ──
 from app.routers import auth_router, student_router, scan_router, tts_router, chat_router, quiz_router, parent_router, admin_router
-from app.routers import lesson_router
+from app.routers import lesson_router, achievement_router
 
 app.include_router(lesson_router.router, prefix="/api/lessons", tags=["lessons"])
 app.include_router(auth_router.router, prefix="/api/auth", tags=["Authentication"])
@@ -121,6 +121,7 @@ app.include_router(chat_router.router, prefix="/api/chat", tags=["AI Chat"])
 app.include_router(quiz_router.router, prefix="/api/quizzes", tags=["Quizzes"])
 app.include_router(parent_router.router, prefix="/api/parent", tags=["Parent"])
 app.include_router(admin_router.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(achievement_router.router, prefix="/api/achievements", tags=["Achievements"])
 
 
 # ── Health Check ──

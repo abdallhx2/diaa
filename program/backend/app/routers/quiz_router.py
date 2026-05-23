@@ -4,8 +4,11 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.services.quiz_service import get_quizzes_by_lesson, get_quizzes_by_type, submit_answer, get_student_results, get_random_questions
 from app.services.report_service import recalculate_student_progress
+from app.services import achievement_service
+from app.services import notification_service
 from app.schemas.quiz_schema import QuizSubmit
 from app.models.user import User
+from app.models.quiz import Quiz
 from app.middleware.auth_middleware import get_current_user
 from app.utils.helpers import format_response
 
@@ -78,6 +81,18 @@ async def submit_quiz(
         )
         # Recalculate student progress after each answer
         recalculate_student_progress(db, current_user.student.id)
+        # Achievements: 1 if correct else 0 out of 1
+        score = 1 if result.get("is_correct") else 0
+        achievement_service.record_quiz_completed(db, current_user.student.id, score, 1)
+        achievement_service.record_activity(db, current_user.student.id)
+        # Notify parent on perfect score
+        if result.get("is_correct"):
+            quiz = db.query(Quiz).filter(Quiz.id == body.quiz_id).first()
+            lesson_title = quiz.lesson.title if quiz and quiz.lesson else ""
+            notification_service.notify_parent_of_child_event(
+                db, current_user.student.id, "quiz_completed",
+                {"score": score, "total": 1, "lesson_title": lesson_title},
+            )
         return format_response(True, result, "تم تسليم الإجابة")
     except Exception as e:
         raise HTTPException(status_code=500, detail=format_response(False, None, str(e)))

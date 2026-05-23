@@ -26,6 +26,7 @@ import 'package:edu_smart_assistant/screens/parent/parent_progress_screen.dart';
 import 'package:edu_smart_assistant/screens/parent/parent_results_screen.dart';
 import 'package:edu_smart_assistant/screens/parent/completed_lessons_screen.dart';
 import 'package:edu_smart_assistant/screens/parent/my_children_screen.dart';
+import 'package:edu_smart_assistant/screens/student/achievements_screen.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -57,6 +58,7 @@ class AppRoutes {
   static const String parentResults = '/parent-results';
   static const String completedLessons = '/completed-lessons';
   static const String myChildren = '/my-children';
+  static const String achievements = '/achievements';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -117,6 +119,8 @@ class AppRoutes {
         return MaterialPageRoute(settings: settings, builder: (_) => const CompletedLessonsScreen());
       case myChildren:
         return MaterialPageRoute(settings: settings, builder: (_) => const MyChildrenScreen());
+      case achievements:
+        return MaterialPageRoute(settings: settings, builder: (_) => const AchievementsScreen());
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(

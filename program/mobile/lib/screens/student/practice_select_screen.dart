@@ -7,6 +7,9 @@ import 'package:edu_smart_assistant/providers/lessons_provider.dart';
 import 'package:edu_smart_assistant/providers/student_provider.dart';
 import 'package:edu_smart_assistant/widgets/diyaa_inner_nav.dart';
 import 'package:edu_smart_assistant/screens/student/practice_quiz_screen.dart';
+import 'package:edu_smart_assistant/widgets/feedback/skeleton_list.dart';
+import 'package:edu_smart_assistant/widgets/feedback/empty_state.dart';
+import 'package:edu_smart_assistant/widgets/feedback/error_state.dart';
 
 class PracticeSelectScreen extends StatefulWidget {
   const PracticeSelectScreen({super.key});
@@ -26,6 +29,12 @@ class _PracticeSelectScreenState extends State<PracticeSelectScreen> {
           context.read<StudentProvider>().studentData?.grade ?? 'الثالث';
       context.read<SubjectsProvider>().loadSubjects(grade);
     });
+  }
+
+  @override
+  void dispose() {
+    context.read<SubjectsProvider>().cleanup();
+    super.dispose();
   }
 
   Future<void> _startPractice(String subject) async {
@@ -94,18 +103,24 @@ class _PracticeSelectScreenState extends State<PracticeSelectScreen> {
             child: Consumer<SubjectsProvider>(
               builder: (context, provider, _) {
                 if (provider.isLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const SkeletonList(count: 4);
+                }
+                if (provider.errorMessage != null) {
+                  return ErrorState(
+                    onRetry: () {
+                      final grade = context
+                          .read<StudentProvider>()
+                          .studentData
+                          ?.grade ?? 'الثالث';
+                      context.read<SubjectsProvider>().loadSubjects(grade);
+                    },
+                  );
                 }
                 if (provider.subjects.isEmpty) {
-                  return Center(
-                    child: Text(
-                      'لا توجد مواد متاحة لصفك حالياً',
-                      style: GoogleFonts.tajawal(
-                        color: AppTheme.text200,
-                        fontSize: 15,
-                      ),
-                      textDirection: TextDirection.rtl,
-                    ),
+                  return const EmptyState(
+                    emoji: '🎯',
+                    title: 'ما عندك مواد للتمرين بعد',
+                    subtitle: 'ابدأ من الرئيسية',
                   );
                 }
                 return SingleChildScrollView(

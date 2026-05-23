@@ -6,6 +6,9 @@ import 'package:edu_smart_assistant/providers/subjects_provider.dart';
 import 'package:edu_smart_assistant/providers/student_provider.dart';
 import 'package:edu_smart_assistant/widgets/diyaa_inner_nav.dart';
 import 'package:edu_smart_assistant/screens/student/lesson_list_screen.dart';
+import 'package:edu_smart_assistant/widgets/feedback/skeleton_list.dart';
+import 'package:edu_smart_assistant/widgets/feedback/empty_state.dart';
+import 'package:edu_smart_assistant/widgets/feedback/error_state.dart';
 
 class SubjectSelectionScreen extends StatefulWidget {
   const SubjectSelectionScreen({super.key});
@@ -50,18 +53,24 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
             child: Consumer<SubjectsProvider>(
               builder: (context, provider, _) {
                 if (provider.isLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const SkeletonList(count: 4);
+                }
+                if (provider.errorMessage != null) {
+                  return ErrorState(
+                    onRetry: () {
+                      final grade = context
+                          .read<StudentProvider>()
+                          .studentData
+                          ?.grade ?? 'الثالث';
+                      context.read<SubjectsProvider>().loadSubjects(grade);
+                    },
+                  );
                 }
                 if (provider.subjects.isEmpty) {
-                  return Center(
-                    child: Text(
-                      'لا توجد مواد متاحة لصفك حالياً',
-                      style: GoogleFonts.tajawal(
-                        color: AppTheme.text200,
-                        fontSize: 15,
-                      ),
-                      textDirection: TextDirection.rtl,
-                    ),
+                  return const EmptyState(
+                    emoji: '📚',
+                    title: 'ما عندك مواد بعد',
+                    subtitle: 'ابدأ من الرئيسية',
                   );
                 }
                 return SingleChildScrollView(

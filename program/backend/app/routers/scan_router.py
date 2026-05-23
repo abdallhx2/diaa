@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.services.ocr_service import extract_text_from_image
+from app.services import achievement_service
 from app.models.lesson import Lesson
 from app.models.user import User
 from app.middleware.auth_middleware import get_current_user
@@ -79,6 +80,7 @@ async def qr_lookup(
 async def upload_image(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """Upload an image file and extract Arabic text using OCR."""
     try:
@@ -96,6 +98,11 @@ async def upload_image(
             )
 
         text = extract_text_from_image(contents)
+
+        if current_user.role.value == "student" and current_user.student:
+            achievement_service.record_reading(db, current_user.student.id)
+            achievement_service.record_activity(db, current_user.student.id)
+
         return format_response(True, {"extracted_text": text}, "تم استخراج النص بنجاح")
     except HTTPException:
         raise

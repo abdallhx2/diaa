@@ -101,4 +101,8 @@ class QuizProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+
+  void cleanup() {
+    reset();
+  }
 }

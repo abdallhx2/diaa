@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from typing import Literal
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.services.auth_service import (
@@ -16,7 +18,13 @@ from app.schemas.auth_schema import (
 )
 from app.middleware.auth_middleware import get_current_user, verify_firebase_token as verify_firebase_token_dep
 from app.models.user import User
+from app.models.fcm_token import FcmToken
 from app.utils.helpers import format_response
+
+
+class FcmTokenRequest(BaseModel):
+    token: str
+    platform: Literal["android", "ios"]
 
 router = APIRouter()
 
@@ -99,4 +107,28 @@ async def get_me(
         profile = get_user_profile(db, current_user)
         return format_response(True, profile, "بيانات المستخدم")
     except Exception as e:
+        raise HTTPException(status_code=500, detail=format_response(False, None, str(e)))
+
+
+@router.post("/fcm-token")
+async def register_fcm_token(
+    body: FcmTokenRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Upsert FCM device token for current user (parents only receive notifications)."""
+    try:
+        existing = (
+            db.query(FcmToken)
+            .filter(FcmToken.user_id == current_user.id, FcmToken.token == body.token)
+            .first()
+        )
+        if existing:
+            existing.platform = body.platform
+        else:
+            db.add(FcmToken(user_id=current_user.id, token=body.token, platform=body.platform))
+        db.commit()
+        return format_response(True, None, "تم تسجيل الجهاز بنجاح")
+    except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=format_response(False, None, str(e)))

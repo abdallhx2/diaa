@@ -3,9 +3,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:edu_smart_assistant/providers/lesson_provider.dart';
+import 'package:edu_smart_assistant/providers/achievement_provider.dart';
 import 'package:edu_smart_assistant/config/theme.dart';
 import 'package:edu_smart_assistant/widgets/diyaa_inner_nav.dart';
 import 'package:edu_smart_assistant/widgets/loading_widget.dart';
+import 'package:edu_smart_assistant/utils/navigation_helpers.dart';
 
 class TextDisplayScreen extends StatefulWidget {
   const TextDisplayScreen({super.key});
@@ -54,6 +56,15 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
     }
   }
 
+  void _finish(BuildContext context) {
+    _audioPlayer.stop();
+    context.read<AchievementProvider>().loadProgress();
+    finishToDashboard(
+      context,
+      cleanup: () => context.read<LessonProvider>().cleanup(),
+    );
+  }
+
   @override
   void dispose() {
     _audioPlayer.dispose();
@@ -66,14 +77,25 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
       builder: (context, lessonProvider, _) {
         final text = lessonProvider.extractedText ?? '';
 
-        return Scaffold(
+        return PopScope(
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop) {
+              _audioPlayer.stop();
+              lessonProvider.cleanup();
+            }
+          },
+          child: Scaffold(
           backgroundColor: AppTheme.bg100,
           body: SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const DiyaaInnerNav(title: 'نتيجة اقرأ لي'),
-
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                 Container(
                   margin: const EdgeInsets.all(14),
                   padding: const EdgeInsets.symmetric(
@@ -226,10 +248,42 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
                     ],
                   ),
                 ),
+                      ],
+                    ),
+                  ),
+                ),
+                SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () => _finish(context),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.primary200,
+                          side: const BorderSide(color: AppTheme.primary200),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'إنهاء',
+                          style: GoogleFonts.tajawal(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
-        );
+        ),
+      );
       },
     );
   }
